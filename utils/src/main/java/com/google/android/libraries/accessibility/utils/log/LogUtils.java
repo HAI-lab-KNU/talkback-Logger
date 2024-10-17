@@ -138,22 +138,6 @@ public class LogUtils {
   /**
    * Logs a string to the console at the INFO log level.
    *
-   * @param isSaveToDB The decision to save to DataBase
-   * @param tag The tag that should be associated with the event
-   * @param format A format string, see {@link String#format(String, Object...)}
-   * @param args String formatter arguments
-   */
-  public static void i(Boolean isSaveToDB, String tag, String format, @Nullable Object... args) {
-    if(isSaveToDB)
-      //todo:
-      log(tag, Log.INFO, format, args);
-    else
-      log(tag, Log.INFO, format, args);
-  }
-
-  /**
-   * Logs a string to the console at the INFO log level.
-   *
    * @param tag The tag that should be associated with the event
    * @param throwable A {@link Throwable} containing system state information to log
    * @param format A format string, see {@link String#format(String, Object...)}
@@ -174,21 +158,6 @@ public class LogUtils {
     log(tag, Log.WARN, format, args);
   }
 
-  /**
-   * Logs a string to the console at the WARN log level.
-   *
-   * @param isSaveToDB The decision to save to DataBase
-   * @param tag The tag that should be associated with the event
-   * @param format A format string, see {@link String#format(String, Object...)}
-   * @param args String formatter arguments
-   */
-  public static void w(Boolean isSaveToDB,String tag, String format, @Nullable Object... args) {
-    if(isSaveToDB)
-      //todo:
-      log(tag, Log.WARN, format, args);
-    else
-      log(tag, Log.WARN, format, args);
-  }
 
   /**
    * Logs a string to the console at the WARN log level.
