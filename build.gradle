@@ -1,0 +1,54 @@
+// For building the open-source release of TalkBack.
+
+apply plugin: 'com.android.application'
+
+apply from: 'shared.gradle'
+
+dependencies {
+    implementation project(':talkback')
+}
+
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.6.0'
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+android {
+    buildToolsVersion '35.0.0'
+    namespace talkbackApplicationId
+    defaultConfig {
+        applicationId talkbackApplicationId
+        versionName "14.1"
+        versionCode 3
+        minSdk 26
+        targetSdk 34
+        compileSdk 35
+        testInstrumentationRunner 'android.test.InstrumentationTestRunner'
+        multiDexEnabled true
+    }
+    packagingOptions {
+        exclude 'LICENSE'
+        exclude 'README'
+    }
+    lint {
+        checkReleaseBuilds false
+        abortOnError false
+    }
+    productFlavors {
+        phone {
+            dimension "target"
+        }
+    }
+}
