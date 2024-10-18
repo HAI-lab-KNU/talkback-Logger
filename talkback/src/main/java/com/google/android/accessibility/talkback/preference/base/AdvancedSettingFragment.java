@@ -24,6 +24,10 @@ import android.content.res.Resources;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.text.format.DateFormat;
+import android.util.Log;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.preference.ListPreference;
 import androidx.preference.Preference;
 import androidx.preference.TwoStatePreference;
@@ -65,6 +69,8 @@ public class AdvancedSettingFragment extends TalkbackBaseFragment {
     if (timeFeedbackFormatPref != null) {
       timeFeedbackFormatPref.setSummaryProvider(preference -> getSummaryForTimeFeedbackFormat());
     }
+
+    Log.d("CHECK! Pref",timeFeedbackFormatPref.toString());
   }
 
   private String getSummaryForTimeFeedbackFormat() {

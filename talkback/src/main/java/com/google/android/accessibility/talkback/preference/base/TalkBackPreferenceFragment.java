@@ -52,6 +52,9 @@ import com.google.android.accessibility.utils.FormFactorUtils;
 import com.google.android.accessibility.utils.PackageManagerUtils;
 import com.google.android.accessibility.utils.PreferenceSettingsUtils;
 import com.google.android.accessibility.utils.SettingsUtils;
+import com.google.android.libraries.accessibility.utils.log.LogEntry;
+import com.google.android.libraries.accessibility.utils.log.LogHelper;
+
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -228,6 +231,7 @@ public class TalkBackPreferenceFragment extends TalkbackBaseFragment {
 
     //noti: Loging TTS Setting
     logTtsSettings();
+
     ttsSettingsPreference.setIntent(ttsSettingsIntent);
   }
 
@@ -236,12 +240,14 @@ public class TalkBackPreferenceFragment extends TalkbackBaseFragment {
 
   private TextToSpeech tts;
   private void logTtsSettings() {
+    LogEntry logEntry =new LogEntry();
     tts = new TextToSpeech(requireContext(), status -> {
       if (status == TextToSpeech.SUCCESS) {
         // TTS 엔진 로깅
         String ttsEngine = Settings.Secure.getString(
                 requireContext().getContentResolver(),
                 Settings.Secure.TTS_DEFAULT_SYNTH);
+        logEntry.setTTSEngine(ttsEngine);
         Log.d("CHECK! TTS Setting", "Default TTS Engine: " + ttsEngine);
         float speechRate = Settings.Secure.getFloat(
                 requireContext().getContentResolver(),
@@ -249,6 +255,9 @@ public class TalkBackPreferenceFragment extends TalkbackBaseFragment {
         float pitch = Settings.Secure.getFloat(
                 requireContext().getContentResolver(),
                 Settings.Secure.TTS_DEFAULT_PITCH, 1.0f);
+        logEntry.setTTSSpeechRate(speechRate);
+        logEntry.setTTSPitch(pitch);
+        LogHelper.SavetoLocalDB(logEntry);
         Log.d("CHECK! TTS Setting", "Speech Rate: " + speechRate);
         Log.d("CHECK! TTS Setting", "Pitch: " + pitch);
 

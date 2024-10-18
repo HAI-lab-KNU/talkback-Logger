@@ -46,6 +46,8 @@ import java.util.Objects;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+import com.google.android.libraries.accessibility.utils.log.LogEntry;
+import com.google.android.libraries.accessibility.utils.log.LogHelper;
 /**
  * Interprets {@link AccessibilityEvent#TYPE_VIEW_SCROLLED} and {@link
  * AccessibilityEvent#TYPE_WINDOW_CONTENT_CHANGED} with scroll position information.
@@ -85,7 +87,6 @@ public class ScrollEventInterpreter implements AccessibilityEventListener {
 
     public final boolean isFromScrollable;
     public final boolean isMediaPlayerAutoScroll;
-
     /**
      * Created at {@link #onScrollActionCompat(int, AccessibilityNodeInfoCompat, long)} to identify
      * auto scroll action.
@@ -255,8 +256,12 @@ public class ScrollEventInterpreter implements AccessibilityEventListener {
         }
         notifyListenersWithInterpretation(event, interpretation, eventId);
         //noti: Log Scroll Direction
-        if(interpretation.scrollDirection != ScrollEventInterpretation.DEFAULT_INTERPRETATION.scrollDirection)
+        if(interpretation.scrollDirection != ScrollEventInterpretation.DEFAULT_INTERPRETATION.scrollDirection){
+          LogEntry logEntry = new LogEntry();
+          logEntry.setScrollDirection(interpretation.scrollDirection);
+          LogHelper.SavetoLocalDB(logEntry);
           Log.d("CHECK! Scroll",TraversalStrategyUtils.directionToString(interpretation.scrollDirection));
+        }
         break;
       default:
         break;
@@ -406,7 +411,6 @@ public class ScrollEventInterpreter implements AccessibilityEventListener {
         && Math.abs(scrollDeltaY) < SCROLL_NOISE_RANGE) {
       return TraversalStrategy.SEARCH_FOCUS_UNKNOWN;
     }
-    // Gets the scroll delta value but ignores the small noises.
     /* noti : original
     if (scrollDeltaX - SCROLL_NOISE_RANGE > 0 || scrollDeltaY - SCROLL_NOISE_RANGE > 0) {
       return TraversalStrategy.SEARCH_FOCUS_FORWARD;

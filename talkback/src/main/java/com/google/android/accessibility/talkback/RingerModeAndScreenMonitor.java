@@ -51,6 +51,8 @@ import com.google.android.accessibility.utils.output.FeedbackController;
 import com.google.android.accessibility.utils.output.FeedbackItem;
 import com.google.android.accessibility.utils.output.SpeechController;
 import com.google.android.accessibility.utils.output.SpeechController.SpeakOptions;
+import com.google.android.libraries.accessibility.utils.log.LogEntry;
+import com.google.android.libraries.accessibility.utils.log.LogHelper;
 import com.google.android.libraries.accessibility.utils.log.LogUtils;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -127,6 +129,8 @@ public class RingerModeAndScreenMonitor extends BroadcastReceiver
   private boolean monitoring = false;
 
   private final ExecutorService executor;
+
+  private LogEntry logEntry;
 
   @Override
   public void onDisplayStateChanged(boolean displayOn) {
@@ -215,14 +219,24 @@ public class RingerModeAndScreenMonitor extends BroadcastReceiver
         break;
       case Intent.ACTION_SCREEN_ON:
         isInteractive = true;
-        //noti: Log Here
+
+        //noti: Log here
+        logEntry = new LogEntry();
+        logEntry.setIsScreenOn(1);
+        LogHelper.SavetoLocalDB(logEntry);
         Log.d("CHECK! IsScreenOn",""+true);
+
         handleScreenOn(eventId);
         break;
       case Intent.ACTION_SCREEN_OFF:
         isInteractive = false;
-        //noti: Log Here
+
+        //noti: Log here
+        logEntry = new LogEntry();
+        logEntry.setIsScreenOn(0);
+        LogHelper.SavetoLocalDB(logEntry);
         Log.d("CHECK! IsScreenOn",""+false);
+
         handleScreenOff(eventId);
         break;
       case Intent.ACTION_USER_PRESENT:

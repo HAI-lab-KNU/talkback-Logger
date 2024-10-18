@@ -20,6 +20,8 @@ import static android.content.res.Configuration.ORIENTATION_LANDSCAPE;
 import static android.content.res.Configuration.ORIENTATION_PORTRAIT;
 import static android.content.res.Configuration.ORIENTATION_UNDEFINED;
 
+//import static com.google.android.libraries.accessibility.utils.log.Logger.DOMAIN_PERFORMANCE;
+
 import android.accessibilityservice.AccessibilityGestureEvent;
 import android.os.SystemClock;
 import android.text.TextUtils;
@@ -31,13 +33,19 @@ import android.view.accessibility.AccessibilityEvent;
 import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
 import androidx.annotation.VisibleForTesting;
+
+import com.google.android.libraries.accessibility.utils.log.LogEntry;
+import com.google.android.libraries.accessibility.utils.log.LogHelper;
 import com.google.android.libraries.accessibility.utils.log.LogUtils;
 import com.google.common.collect.EvictingQueue;
 import com.google.common.collect.ImmutableList;
+
+import java.time.LocalDateTime;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -68,7 +76,7 @@ public class Performance {
   private static final long FEEDBACK_COMPOSED_THRESHOLD_MS = 150;
   private static final long FEEDBACK_QUEUED_THRESHOLD_MS = 1000;
   private static final long FEEDBACK_HEARD_THRESHOLD_MS = 1000;
-
+  private LogHelper logHelper;
   /////////////////////////////////////////////////////////////////////////////////////////////
   // Constants
 
@@ -209,6 +217,11 @@ public class Performance {
   /////////////////////////////////////////////////////////////////////////////////////////////
   // Methods to track events
 
+
+//  private void i(String format, String... args){
+//    com.google.android.libraries.accessibility.utils.log.Logger.i(LocalDateTime.now(), DOMAIN_PERFORMANCE, format, args);
+//  }
+
   /**
    * Method to start tracking processing latency for an event. Uses event type as statistics
    * segmentation label.
@@ -218,8 +231,20 @@ public class Performance {
    */
   public EventId onEventReceived(@NonNull AccessibilityEvent event) {
     @NonNull EventId eventId = toEventId(event);
+
+    //com.google.android.libraries.accessibility.utils.log.Logger.i(LocalDateTime.now(), DOMAIN, streg)
+
+
     //noti: Log here
+    LogEntry logEntry = new LogEntry();
+    logEntry.setEventId(eventId);
+    LogHelper.SavetoLocalDB(logEntry);
+
+
+
     Log.d("CHECK! EventId", eventId.toString());
+
+
     if (!trackEvents()) {
       return eventId;
     }
@@ -245,8 +270,13 @@ public class Performance {
   public EventId onEventReceived(@NonNull KeyEvent event) {
     int keycode = event.getKeyCode();
     EventId eventId = toEventId(event);
+
     //noti: Log here
+    LogEntry logEntry = new LogEntry();
+    logEntry.setEventId(eventId);
+    LogHelper.SavetoLocalDB(logEntry);
     Log.d("CHECK! EventId", eventId.toString());
+
     if (!trackEvents()) {
       return eventId;
     }
@@ -326,8 +356,13 @@ public class Performance {
    */
   public EventId onGestureEventReceived(int gestureId) {
     EventId eventId = new EventId(getUptime(), EVENT_TYPE_GESTURE, gestureId);
+
     //noti: Log here
+    LogEntry logEntry = new LogEntry();
+    logEntry.setEventId(eventId);
+    LogHelper.SavetoLocalDB(logEntry);
     Log.d("CHECK! EventId", eventId.toString());
+
     if (!trackEvents()) {
       return eventId;
     }
@@ -364,8 +399,13 @@ public class Performance {
   public EventId onFingerprintGestureEventReceived(int fingerprintGestureId) {
     EventId eventId =
         new EventId(getUptime(), EVENT_TYPE_FINGERPRINT_GESTURE, fingerprintGestureId);
+
     //noti: Log here
+    LogEntry logEntry = new LogEntry();
+    logEntry.setEventId(eventId);
+    LogHelper.SavetoLocalDB(logEntry);
     Log.d("CHECK! EventId", eventId.toString());
+
     if (!trackEvents()) {
       return eventId;
     }
@@ -381,8 +421,13 @@ public class Performance {
 
   public EventId onKeyComboEventReceived(int keyComboId) {
     EventId eventId = new EventId(getUptime(), EVENT_TYPE_KEY_COMBO, keyComboId);
+
     //noti: Log here
+    LogEntry logEntry = new LogEntry();
+    logEntry.setEventId(eventId);
+    LogHelper.SavetoLocalDB(logEntry);
     Log.d("CHECK! EventId", eventId.toString());
+
     if (!trackEvents()) {
       return eventId;
     }
@@ -397,8 +442,13 @@ public class Performance {
 
   public EventId onVolumeKeyComboEventReceived(int keyComboId) {
     EventId eventId = new EventId(getUptime(), EVENT_TYPE_VOLUME_KEY_COMBO, keyComboId);
+
     //noti: Log here
+    LogEntry logEntry = new LogEntry();
+    logEntry.setEventId(eventId);
+    LogHelper.SavetoLocalDB(logEntry);
     Log.d("CHECK! EventId", eventId.toString());
+
     if (!trackEvents()) {
       return eventId;
     }
@@ -413,8 +463,13 @@ public class Performance {
 
   public EventId onRotateEventReceived(int orientation) {
     EventId eventId = new EventId(getUptime(), EVENT_TYPE_ROTATE, orientation);
+
     //noti: Log here
+    LogEntry logEntry = new LogEntry();
+    logEntry.setEventId(eventId);
+    LogHelper.SavetoLocalDB(logEntry);
     Log.d("CHECK! EventId", eventId.toString());
+
     if (!trackEvents()) {
       return eventId;
     }

@@ -234,6 +234,8 @@ import com.google.android.accessibility.utils.output.SpeechController.UtteranceC
 import com.google.android.accessibility.utils.output.SpeechControllerImpl;
 import com.google.android.accessibility.utils.output.SpeechControllerImpl.CapitalLetterHandlingMethod;
 import com.google.android.libraries.accessibility.utils.concurrent.HandlerExecutor;
+import com.google.android.libraries.accessibility.utils.log.LogEntry;
+import com.google.android.libraries.accessibility.utils.log.LogHelper;
 import com.google.android.libraries.accessibility.utils.log.LogUtils;
 import com.google.common.collect.ImmutableMap;
 import java.io.FileDescriptor;
@@ -681,15 +683,22 @@ public class TalkBackService extends AccessibilityService
 
   private EventLatencyLogger eventLatencyLogger;
 
+  private LogEntry logEntry;
 
   @Override
   public void onCreate() {
     bootReceiver = new BootReceiver();
     ContextCompat.registerReceiver(this, bootReceiver, BootReceiver.getFilter(), RECEIVER_EXPORTED);
     super.onCreate();
+    //noti
     android.os.Debug.waitForDebugger();
     this.setTheme(R.style.TalkbackBaseTheme);
     instance = this;
+    try(LogHelper logHelper = new LogHelper(this)){
+      Log.d("CHECK!","LogerHelper Success to Assignment");
+    }catch (Exception e){
+      e.printStackTrace();
+    }
     setServiceState(ServiceStateListener.SERVICE_STATE_INACTIVE);
     systemUeh = Thread.getDefaultUncaughtExceptionHandler();
     Thread.setDefaultUncaughtExceptionHandler(this);
@@ -881,8 +890,13 @@ public class TalkBackService extends AccessibilityService
 
   @Override
   public void onAccessibilityEvent(AccessibilityEvent event) {
+
     //noti:
+    logEntry = new LogEntry();
+    logEntry.setAccessibilityEvent(event);
     Log.d("CHECK! AccessibilityEvent",event.toString());
+
+
     Performance perf = Performance.getInstance();
     EventId eventId = perf.onEventReceived(event);
     int eventType = event.getEventType();
@@ -921,12 +935,21 @@ public class TalkBackService extends AccessibilityService
     // 상호작용한 노드 정보 가져오기
     if (event.getEventType() == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
             event.getEventType() == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
+
+      logEntry.setIsWindowChange(true);
       Log.d("CHECK! WindowChange", "Window Changed");
 
       // 루트 노드 가져오기
       AccessibilityNodeInfo rootNode = getRootInActiveWindow();
       if (rootNode != null) {
-        traverseNodeTree(rootNode, 0);
+        //todo
+        List<AccessibilityNodeInfo> nodeInfos = getAllNodes(rootNode);
+        logEntry.setViewNodeInfo(nodeInfos);
+        Rect bounds = new Rect();
+        for (AccessibilityNodeInfo node : nodeInfos) {
+          node.getBoundsInScreen(bounds);
+          Log.d("CHECK! Node Info", "Class: " + node.getClassName() + ", Text: " + node.getText()+", BoundsInScreen: "+bounds.toShortString());
+        }
       } else {
         Log.e("CHECK! ViewInfo", "루트 노드- null");
       }
@@ -934,37 +957,38 @@ public class TalkBackService extends AccessibilityService
     if(eventType == AccessibilityEvent.TYPE_VIEW_ACCESSIBILITY_FOCUSED) {
       AccessibilityNodeInfo nodeInfo = event.getSource();
       if (nodeInfo != null) {
+        logEntry.setCurrentNodeInfo(nodeInfo);
         Log.d("CHECK! CurrentNodeInfo", nodeInfo.toString());
       } else {
         Log.d("CHECK! NodeInfo", "노드 정보가 NULL입니다.");
       }
     }
     //noti: Log end
-
+    LogHelper.SavetoLocalDB(logEntry);
   }
 
-  private void traverseNodeTree(AccessibilityNodeInfo node, int depth) {
+  private void traverseNodeTree(AccessibilityNodeInfo node, int depth, List<AccessibilityNodeInfo> nodeList) {
     if (node == null) return;
-    Rect bounds = new Rect();
-    node.getBoundsInScreen(bounds);
-    // 현재 노드의 정보 출력
-    StringBuilder sb = new StringBuilder();
-    for (int i = 0; i < depth; i++) sb.append("--");
-    sb.append("Class: ").append(node.getClassName())
-            .append(", Text: ").append(node.getText())
-            .append(", ContentDescription: ").append(node.getContentDescription())
-            .append(", BoundsInScreen").append(bounds.toShortString());
 
-    Log.d("CHECK! ViewInfo", sb.toString());
+    // 현재 노드를 리스트에 추가
+    nodeList.add(AccessibilityNodeInfo.obtain(node));
 
     // 자식 노드 순회
     for (int i = 0; i < node.getChildCount(); i++) {
-      traverseNodeTree(node.getChild(i), depth + 1);
+      traverseNodeTree(node.getChild(i), depth + 1, nodeList);
     }
 
     // 메모리 해제
     node.recycle();
   }
+
+  // 호출하는 함수에서 리스트를 생성하고 호출하는 부분
+  public List<AccessibilityNodeInfo> getAllNodes(AccessibilityNodeInfo rootNode) {
+    List<AccessibilityNodeInfo> nodeList = new ArrayList<>();
+    traverseNodeTree(rootNode, 0, nodeList);
+    return nodeList;
+  }
+
   public boolean supportsTouchScreen() {
     return supportsTouchScreen;
   }
@@ -1123,8 +1147,14 @@ public class TalkBackService extends AccessibilityService
 
   @Override
   protected boolean onGesture(int gestureId) {
+
     //noti: Log here
+    logEntry = new LogEntry();
+    logEntry.setGesture(gestureId);
+    LogHelper.SavetoLocalDB(logEntry);
     Log.d("CHECK! Gesture",AccessibilityGestureEvent.gestureIdToString(gestureId));
+
+
     return handleOnGestureById(gestureId);
   }
 
@@ -1135,7 +1165,11 @@ public class TalkBackService extends AccessibilityService
           .getFeedbackReturner()
           .returnFeedback(
               Performance.EVENT_ID_UNTRACKED, Feedback.saveGesture(accessibilityGestureEvent));
+
       //noti: Log here
+      logEntry = new LogEntry();
+      logEntry.setGesture(accessibilityGestureEvent.getGestureId());
+      LogHelper.SavetoLocalDB(logEntry);
       Log.d("CHECK! Gesture",AccessibilityGestureEvent.gestureIdToString(accessibilityGestureEvent.getGestureId()));
       return true;
     }
@@ -1174,8 +1208,12 @@ public class TalkBackService extends AccessibilityService
     }
 
     gestureController.onGesture(gestureId, eventId);
+
     //noti: Log Here!!!
+    LogEntry logEntry=new LogEntry();
     String action = gestureShortcutMapping.getActionKeyFromGestureId(gestureId);
+    logEntry.setAction(action);
+    LogHelper.SavetoLocalDB(logEntry);
     Log.d("CHECK! Action","action : "+action);
 
     /*
