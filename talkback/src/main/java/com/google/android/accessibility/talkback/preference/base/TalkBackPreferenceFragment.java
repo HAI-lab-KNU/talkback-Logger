@@ -24,7 +24,6 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.content.pm.ResolveInfo;
-import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.speech.tts.TextToSpeech;
@@ -49,17 +48,14 @@ import com.google.android.accessibility.talkback.trainingcommon.tv.VendorConfigR
 import com.google.android.accessibility.talkback.utils.RemoteIntentUtils;
 import com.google.android.accessibility.utils.FeatureSupport;
 import com.google.android.accessibility.utils.FormFactorUtils;
-import com.google.android.accessibility.utils.PackageManagerUtils;
 import com.google.android.accessibility.utils.PreferenceSettingsUtils;
 import com.google.android.accessibility.utils.SettingsUtils;
-import com.google.android.libraries.accessibility.utils.log.LogEntry;
 import com.google.android.libraries.accessibility.utils.log.LogHelper;
+import com.google.android.libraries.accessibility.utils.log.LoggerUtil;
 
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Fragment that holds the preference of Talkback settings. */
@@ -240,26 +236,23 @@ public class TalkBackPreferenceFragment extends TalkbackBaseFragment {
 
   private TextToSpeech tts;
   private void logTtsSettings() {
-    LogEntry logEntry =new LogEntry();
+    StringBuilder sb = new StringBuilder();
     tts = new TextToSpeech(requireContext(), status -> {
       if (status == TextToSpeech.SUCCESS) {
         // TTS 엔진 로깅
         String ttsEngine = Settings.Secure.getString(
                 requireContext().getContentResolver(),
                 Settings.Secure.TTS_DEFAULT_SYNTH);
-        logEntry.setTTSEngine(ttsEngine);
-        Log.d("CHECK! TTS Setting", "Default TTS Engine: " + ttsEngine);
+        sb.append(String.format("TTSEngine : %s",ttsEngine));
         float speechRate = Settings.Secure.getFloat(
                 requireContext().getContentResolver(),
                 Settings.Secure.TTS_DEFAULT_RATE, 1.0f);
         float pitch = Settings.Secure.getFloat(
                 requireContext().getContentResolver(),
                 Settings.Secure.TTS_DEFAULT_PITCH, 1.0f);
-        logEntry.setTTSSpeechRate(speechRate);
-        logEntry.setTTSPitch(pitch);
-        LogHelper.SavetoLocalDB(logEntry);
-        Log.d("CHECK! TTS Setting", "Speech Rate: " + speechRate);
-        Log.d("CHECK! TTS Setting", "Pitch: " + pitch);
+        sb.append(String.format("TTSSpeach Rate : %s",speechRate));
+        sb.append(String.format("TTSPitch : %s",pitch));
+        LoggerUtil.i(System.currentTimeMillis(),LoggerUtil.DOMAIN_TALKBACK_PREFERENCE_FRAGMENT,"TTS : %s",sb.toString());
 
       } else {
         Log.e("TTS_SETTINGS", "TTS 초기화 실패");

@@ -50,7 +50,6 @@ import android.accessibilityservice.AccessibilityServiceInfo;
 import android.accessibilityservice.FingerprintGestureController;
 import android.accessibilityservice.FingerprintGestureController.FingerprintGestureCallback;
 import android.accessibilityservice.TouchInteractionController;
-import android.app.KeyguardManager;
 import android.app.NotificationManager;
 import android.content.BroadcastReceiver;
 import android.content.ClipboardManager;
@@ -234,22 +233,18 @@ import com.google.android.accessibility.utils.output.SpeechController.UtteranceC
 import com.google.android.accessibility.utils.output.SpeechControllerImpl;
 import com.google.android.accessibility.utils.output.SpeechControllerImpl.CapitalLetterHandlingMethod;
 import com.google.android.libraries.accessibility.utils.concurrent.HandlerExecutor;
-import com.google.android.libraries.accessibility.utils.log.LogEntry;
 import com.google.android.libraries.accessibility.utils.log.LogHelper;
 import com.google.android.libraries.accessibility.utils.log.LogUtils;
+import com.google.android.libraries.accessibility.utils.log.LoggerUtil;
 import com.google.common.collect.ImmutableMap;
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
@@ -683,7 +678,9 @@ public class TalkBackService extends AccessibilityService
 
   private EventLatencyLogger eventLatencyLogger;
 
-  private LogEntry logEntry;
+  private static final int DOMAIN = LoggerUtil.DOMAIN_TALKBACK_SERVICE;
+
+  private static StringBuilder sb;
 
   @Override
   public void onCreate() {
@@ -892,9 +889,7 @@ public class TalkBackService extends AccessibilityService
   public void onAccessibilityEvent(AccessibilityEvent event) {
 
     //noti:
-    logEntry = new LogEntry();
-    logEntry.setAccessibilityEvent(event);
-    Log.d("CHECK! AccessibilityEvent",event.toString());
+    LoggerUtil.i(System.currentTimeMillis(),DOMAIN,event.toString());
 
 
     Performance perf = Performance.getInstance();
@@ -930,41 +925,36 @@ public class TalkBackService extends AccessibilityService
     if (diagnosticOverlayController != null) {
       diagnosticOverlayController.displayEvent(event);
     }
-    //noti: Log Start
+    sb = new StringBuilder();
 
     // 상호작용한 노드 정보 가져오기
     if (event.getEventType() == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
             event.getEventType() == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
 
-      logEntry.setIsWindowChange(true);
-      Log.d("CHECK! WindowChange", "Window Changed");
-
+      sb.append(String.format("Window Changed : %b",true));
       // 루트 노드 가져오기
       AccessibilityNodeInfo rootNode = getRootInActiveWindow();
       if (rootNode != null) {
-        //todo
+
         List<AccessibilityNodeInfo> nodeInfos = getAllNodes(rootNode);
-        logEntry.setViewNodeInfo(nodeInfos);
-        Rect bounds = new Rect();
-        for (AccessibilityNodeInfo node : nodeInfos) {
-          node.getBoundsInScreen(bounds);
-          Log.d("CHECK! Node Info", "Class: " + node.getClassName() + ", Text: " + node.getText()+", BoundsInScreen: "+bounds.toShortString());
+        int index = 0;
+        for (AccessibilityNodeInfo nodeInfo : nodeInfos) {
+          sb.append(String.format("ChildrenNodes %d : %s", index++,nodeInfos));
         }
       } else {
-        Log.e("CHECK! ViewInfo", "루트 노드- null");
+        sb.append(String.format("No Child Nodes"));
       }
     }
     if(eventType == AccessibilityEvent.TYPE_VIEW_ACCESSIBILITY_FOCUSED) {
       AccessibilityNodeInfo nodeInfo = event.getSource();
       if (nodeInfo != null) {
-        logEntry.setCurrentNodeInfo(nodeInfo);
-        Log.d("CHECK! CurrentNodeInfo", nodeInfo.toString());
+        sb.append(String.format("Current Node : %s",nodeInfo));
       } else {
-        Log.d("CHECK! NodeInfo", "노드 정보가 NULL입니다.");
+        sb.append(String.format("CurrentNode is null"));
       }
     }
-    //noti: Log end
-    LogHelper.SavetoLocalDB(logEntry);
+    //noti:
+    LoggerUtil.i(System.currentTimeMillis(),DOMAIN,sb.toString());
   }
 
   private void traverseNodeTree(AccessibilityNodeInfo node, int depth, List<AccessibilityNodeInfo> nodeList) {
@@ -1149,11 +1139,7 @@ public class TalkBackService extends AccessibilityService
   protected boolean onGesture(int gestureId) {
 
     //noti: Log here
-    logEntry = new LogEntry();
-    logEntry.setGesture(gestureId);
-    LogHelper.SavetoLocalDB(logEntry);
-    Log.d("CHECK! Gesture",AccessibilityGestureEvent.gestureIdToString(gestureId));
-
+    LoggerUtil.i(System.currentTimeMillis(),DOMAIN,"Gesture ID : %d",gestureId);
 
     return handleOnGestureById(gestureId);
   }
@@ -1167,10 +1153,7 @@ public class TalkBackService extends AccessibilityService
               Performance.EVENT_ID_UNTRACKED, Feedback.saveGesture(accessibilityGestureEvent));
 
       //noti: Log here
-      logEntry = new LogEntry();
-      logEntry.setGesture(accessibilityGestureEvent.getGestureId());
-      LogHelper.SavetoLocalDB(logEntry);
-      Log.d("CHECK! Gesture",AccessibilityGestureEvent.gestureIdToString(accessibilityGestureEvent.getGestureId()));
+      LoggerUtil.i(System.currentTimeMillis(),DOMAIN,"Gesture ID : %s",accessibilityGestureEvent);
       return true;
     }
     return false;
@@ -1209,12 +1192,10 @@ public class TalkBackService extends AccessibilityService
 
     gestureController.onGesture(gestureId, eventId);
 
-    //noti: Log Here!!!
-    LogEntry logEntry=new LogEntry();
+
     String action = gestureShortcutMapping.getActionKeyFromGestureId(gestureId);
-    logEntry.setAction(action);
-    LogHelper.SavetoLocalDB(logEntry);
-    Log.d("CHECK! Action","action : "+action);
+
+    LoggerUtil.i(System.currentTimeMillis(),DOMAIN,"Action : %s",action);
 
     /*
     if (gestureId == GESTURE_FAKED_SPLIT_TYPING && mainTouchInteractionMonitor != null) {

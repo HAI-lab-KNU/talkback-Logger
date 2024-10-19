@@ -34,18 +34,16 @@ import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
 import androidx.annotation.VisibleForTesting;
 
-import com.google.android.libraries.accessibility.utils.log.LogEntry;
 import com.google.android.libraries.accessibility.utils.log.LogHelper;
 import com.google.android.libraries.accessibility.utils.log.LogUtils;
+import com.google.android.libraries.accessibility.utils.log.LoggerUtil;
 import com.google.common.collect.EvictingQueue;
 import com.google.common.collect.ImmutableList;
 
-import java.time.LocalDateTime;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -82,12 +80,12 @@ public class Performance {
 
   /** Stages that each event goes through, where we want to measure latency. */
   @IntDef({
-    STAGE_FRAMEWORK,
-    STAGE_INLINE_HANDLING,
-    STAGE_FEEDBACK_QUEUED,
-    STAGE_FEEDBACK_HEARD,
-    STAGE_BETWEEN_FEEDBACK_QUEUED_AND_FEEDBACK_HEARD,
-    STAGE_FEEDBACK_COMPOSED,
+          STAGE_FRAMEWORK,
+          STAGE_INLINE_HANDLING,
+          STAGE_FEEDBACK_QUEUED,
+          STAGE_FEEDBACK_HEARD,
+          STAGE_BETWEEN_FEEDBACK_QUEUED_AND_FEEDBACK_HEARD,
+          STAGE_FEEDBACK_COMPOSED,
   })
   public @interface StageId {}
 
@@ -96,16 +94,16 @@ public class Performance {
   public static final int STAGE_FEEDBACK_QUEUED = 2; // Time until first speech is queued
   public static final int STAGE_FEEDBACK_HEARD = 3; // Time until speech is heard.
   public static final int STAGE_BETWEEN_FEEDBACK_QUEUED_AND_FEEDBACK_HEARD =
-      4; // Time between speech is queued and heard.
+          4; // Time between speech is queued and heard.
   public static final int STAGE_FEEDBACK_COMPOSED = 5; // Time until speech is composed.
   public static final ImmutableList<String> STAGE_NAMES =
-      ImmutableList.of(
-          "STAGE_FRAMEWORK",
-          "STAGE_INLINE_HANDLING",
-          "STAGE_FEEDBACK_QUEUED",
-          "STAGE_FEEDBACK_HEARD",
-          "STAGE_BETWEEN_FEEDBACK_QUEUED_AND_FEEDBACK_HEARD",
-          "STAGE_FEEDBACK_COMPOSED");
+          ImmutableList.of(
+                  "STAGE_FRAMEWORK",
+                  "STAGE_INLINE_HANDLING",
+                  "STAGE_FEEDBACK_QUEUED",
+                  "STAGE_FEEDBACK_HEARD",
+                  "STAGE_BETWEEN_FEEDBACK_QUEUED_AND_FEEDBACK_HEARD",
+                  "STAGE_FEEDBACK_COMPOSED");
 
   /**
    * Event types for which we want to measure latency.
@@ -122,13 +120,13 @@ public class Performance {
    * orientation.
    */
   @IntDef({
-    EVENT_TYPE_ACCESSIBILITY,
-    EVENT_TYPE_KEY,
-    EVENT_TYPE_KEY_COMBO,
-    EVENT_TYPE_VOLUME_KEY_COMBO,
-    EVENT_TYPE_GESTURE,
-    EVENT_TYPE_ROTATE,
-    EVENT_TYPE_FINGERPRINT_GESTURE
+          EVENT_TYPE_ACCESSIBILITY,
+          EVENT_TYPE_KEY,
+          EVENT_TYPE_KEY_COMBO,
+          EVENT_TYPE_VOLUME_KEY_COMBO,
+          EVENT_TYPE_GESTURE,
+          EVENT_TYPE_ROTATE,
+          EVENT_TYPE_FINGERPRINT_GESTURE
   })
   public @interface EventTypeId {}
 
@@ -140,14 +138,14 @@ public class Performance {
   public static final int EVENT_TYPE_ROTATE = 5;
   public static final int EVENT_TYPE_FINGERPRINT_GESTURE = 6;
   public static final ImmutableList<String> EVENT_TYPE_NAMES =
-      ImmutableList.of(
-          "EVENT_TYPE_ACCESSIBILITY",
-          "EVENT_TYPE_KEY",
-          "EVENT_TYPE_KEY_COMBO",
-          "EVENT_TYPE_VOLUME_KEY_COMBO",
-          "EVENT_TYPE_GESTURE",
-          "EVENT_TYPE_ROTATE",
-          "EVENT_TYPE_FINGERPRINT_GESTURE");
+          ImmutableList.of(
+                  "EVENT_TYPE_ACCESSIBILITY",
+                  "EVENT_TYPE_KEY",
+                  "EVENT_TYPE_KEY_COMBO",
+                  "EVENT_TYPE_VOLUME_KEY_COMBO",
+                  "EVENT_TYPE_GESTURE",
+                  "EVENT_TYPE_ROTATE",
+                  "EVENT_TYPE_FINGERPRINT_GESTURE");
 
   public static final @Nullable EventId EVENT_ID_UNTRACKED = null;
 
@@ -236,14 +234,7 @@ public class Performance {
 
 
     //noti: Log here
-    LogEntry logEntry = new LogEntry();
-    logEntry.setEventId(eventId);
-    LogHelper.SavetoLocalDB(logEntry);
-
-
-
-    Log.d("CHECK! EventId", eventId.toString());
-
+    LoggerUtil.i(System.currentTimeMillis(),LoggerUtil.DOMAIN_PERFORMANCE,"EventId : %s",eventId.toString());
 
     if (!trackEvents()) {
       return eventId;
@@ -272,10 +263,7 @@ public class Performance {
     EventId eventId = toEventId(event);
 
     //noti: Log here
-    LogEntry logEntry = new LogEntry();
-    logEntry.setEventId(eventId);
-    LogHelper.SavetoLocalDB(logEntry);
-    Log.d("CHECK! EventId", eventId.toString());
+    LoggerUtil.i(System.currentTimeMillis(),LoggerUtil.DOMAIN_PERFORMANCE,"EventId : %s",eventId.toString());
 
     if (!trackEvents()) {
       return eventId;
@@ -358,10 +346,7 @@ public class Performance {
     EventId eventId = new EventId(getUptime(), EVENT_TYPE_GESTURE, gestureId);
 
     //noti: Log here
-    LogEntry logEntry = new LogEntry();
-    logEntry.setEventId(eventId);
-    LogHelper.SavetoLocalDB(logEntry);
-    Log.d("CHECK! EventId", eventId.toString());
+    LoggerUtil.i(System.currentTimeMillis(),LoggerUtil.DOMAIN_PERFORMANCE,"EventId : %s",eventId.toString());
 
     if (!trackEvents()) {
       return eventId;
@@ -398,13 +383,10 @@ public class Performance {
    */
   public EventId onFingerprintGestureEventReceived(int fingerprintGestureId) {
     EventId eventId =
-        new EventId(getUptime(), EVENT_TYPE_FINGERPRINT_GESTURE, fingerprintGestureId);
+            new EventId(getUptime(), EVENT_TYPE_FINGERPRINT_GESTURE, fingerprintGestureId);
 
     //noti: Log here
-    LogEntry logEntry = new LogEntry();
-    logEntry.setEventId(eventId);
-    LogHelper.SavetoLocalDB(logEntry);
-    Log.d("CHECK! EventId", eventId.toString());
+    LoggerUtil.i(System.currentTimeMillis(),LoggerUtil.DOMAIN_PERFORMANCE,"EventId : %s",eventId.toString());
 
     if (!trackEvents()) {
       return eventId;
@@ -412,7 +394,7 @@ public class Performance {
 
     // Segment events based on fingerprint gesture id.
     String[] labels = {
-      AccessibilityServiceCompatUtils.fingerprintGestureIdToString(fingerprintGestureId)
+            AccessibilityServiceCompatUtils.fingerprintGestureIdToString(fingerprintGestureId)
     };
 
     onEventReceived(eventId, labels);
@@ -423,10 +405,7 @@ public class Performance {
     EventId eventId = new EventId(getUptime(), EVENT_TYPE_KEY_COMBO, keyComboId);
 
     //noti: Log here
-    LogEntry logEntry = new LogEntry();
-    logEntry.setEventId(eventId);
-    LogHelper.SavetoLocalDB(logEntry);
-    Log.d("CHECK! EventId", eventId.toString());
+    LoggerUtil.i(System.currentTimeMillis(),LoggerUtil.DOMAIN_PERFORMANCE,"EventId : %s",eventId.toString());
 
     if (!trackEvents()) {
       return eventId;
@@ -444,10 +423,7 @@ public class Performance {
     EventId eventId = new EventId(getUptime(), EVENT_TYPE_VOLUME_KEY_COMBO, keyComboId);
 
     //noti: Log here
-    LogEntry logEntry = new LogEntry();
-    logEntry.setEventId(eventId);
-    LogHelper.SavetoLocalDB(logEntry);
-    Log.d("CHECK! EventId", eventId.toString());
+    LoggerUtil.i(System.currentTimeMillis(),LoggerUtil.DOMAIN_PERFORMANCE,"EventId : %s",eventId.toString());
 
     if (!trackEvents()) {
       return eventId;
@@ -465,10 +441,7 @@ public class Performance {
     EventId eventId = new EventId(getUptime(), EVENT_TYPE_ROTATE, orientation);
 
     //noti: Log here
-    LogEntry logEntry = new LogEntry();
-    logEntry.setEventId(eventId);
-    LogHelper.SavetoLocalDB(logEntry);
-    Log.d("CHECK! EventId", eventId.toString());
+    LoggerUtil.i(System.currentTimeMillis(),LoggerUtil.DOMAIN_PERFORMANCE,"EventId : %s",eventId.toString());
 
     if (!trackEvents()) {
       return eventId;
@@ -551,10 +524,10 @@ public class Performance {
 
         if (stageLatency > FEEDBACK_COMPOSED_THRESHOLD_MS) {
           LogUtils.d(
-              TAG,
-              "Feedback composed latency exceeds %s ms : %s",
-              FEEDBACK_COMPOSED_THRESHOLD_MS,
-              stageLatency);
+                  TAG,
+                  "Feedback composed latency exceeds %s ms : %s",
+                  FEEDBACK_COMPOSED_THRESHOLD_MS,
+                  stageLatency);
         }
       }
     }
@@ -598,10 +571,10 @@ public class Performance {
 
         if (stageLatency > FEEDBACK_QUEUED_THRESHOLD_MS) {
           LogUtils.d(
-              TAG,
-              "Feedback queued latency exceeds %s ms : %s",
-              FEEDBACK_QUEUED_THRESHOLD_MS,
-              stageLatency);
+                  TAG,
+                  "Feedback queued latency exceeds %s ms : %s",
+                  FEEDBACK_QUEUED_THRESHOLD_MS,
+                  stageLatency);
         }
       }
     }
@@ -643,10 +616,10 @@ public class Performance {
 
             if (stageLatency > FEEDBACK_HEARD_THRESHOLD_MS) {
               LogUtils.d(
-                  TAG,
-                  "Feedback heard latency exceeds %s ms : %s",
-                  FEEDBACK_HEARD_THRESHOLD_MS,
-                  stageLatency);
+                      TAG,
+                      "Feedback heard latency exceeds %s ms : %s",
+                      FEEDBACK_HEARD_THRESHOLD_MS,
+                      stageLatency);
             }
 
             // Track latency between stage queued and stage heard.
@@ -654,14 +627,14 @@ public class Performance {
               long latency = now - eventData.getTimeFeedbackQueued();
               if (latency > TTS_LATENCY_THRESHOLD_MS) {
                 LogUtils.d(
-                    TAG,
-                    "TTS latency of %s exceeds %s ms : %s",
-                    utteranceId,
-                    TTS_LATENCY_THRESHOLD_MS,
-                    latency);
+                        TAG,
+                        "TTS latency of %s exceeds %s ms : %s",
+                        utteranceId,
+                        TTS_LATENCY_THRESHOLD_MS,
+                        latency);
               }
               stats =
-                  getOrCreateStatistics(label, STAGE_BETWEEN_FEEDBACK_QUEUED_AND_FEEDBACK_HEARD);
+                      getOrCreateStatistics(label, STAGE_BETWEEN_FEEDBACK_QUEUED_AND_FEEDBACK_HEARD);
               stats.increment(latency);
             }
           }
@@ -900,8 +873,8 @@ public class Performance {
       barsCount.add(new BarInfo(label.toString(), stats.getCount()));
       barsMean.add(new BarInfo(label.toString(), stats.getMean()));
       barsMedian.add(
-          new BarInfo(
-              label.toString(), stats.getMedianBinStart(), (2 * stats.getMedianBinStart())));
+              new BarInfo(
+                      label.toString(), stats.getMedianBinStart(), (2 * stats.getMedianBinStart())));
       barsStdDev.add(new BarInfo(label.toString(), (float) stats.getStdDev()));
     }
 
@@ -976,24 +949,24 @@ public class Performance {
   public static void displayStatistics(Logger logger, Statistics stats) {
     // Display summary statistics.
     display(
-        logger,
-        "    missing=%s, count=%s, mean=%sms, stdDev=%sms, median=%sms, 90th percentile=%sms, 99th"
-            + " percentile=%sms",
-        stats.getNumMissing(),
-        stats.getCount(),
-        stats.getMean(),
-        stats.getStdDev(),
-        stats.getPercentile(50),
-        stats.getPercentile(90),
-        stats.getPercentile(99));
+            logger,
+            "    missing=%s, count=%s, mean=%sms, stdDev=%sms, median=%sms, 90th percentile=%sms, 99th"
+                    + " percentile=%sms",
+            stats.getNumMissing(),
+            stats.getCount(),
+            stats.getMean(),
+            stats.getStdDev(),
+            stats.getPercentile(50),
+            stats.getPercentile(90),
+            stats.getPercentile(99));
 
     // Display latency distribution.
     ArrayList<BarInfo> bars = new ArrayList<>(stats.histogram.size());
     for (int bin = 0; bin < stats.histogram.size(); ++bin) {
       long binStart = stats.histogramBinToStartValue(bin);
       bars.add(
-          new BarInfo(
-              "" + binStart + "-" + (2 * binStart) + "ms", stats.histogram.get(bin).longValue()));
+              new BarInfo(
+                      "" + binStart + "-" + (2 * binStart) + "ms", stats.histogram.get(bin).longValue()));
     }
     displayBarGraph(logger, "      ", "distribution=", bars, "count");
   }
@@ -1007,7 +980,7 @@ public class Performance {
    * @param barUnits Units to append to each bar value
    */
   private static void displayBarGraph(
-      Logger logger, String prefix, String title, ArrayList<BarInfo> bars, String barUnits) {
+          Logger logger, String prefix, String title, ArrayList<BarInfo> bars, String barUnits) {
     if (!TextUtils.isEmpty(title)) {
       display(logger, "  %s", title);
     }
@@ -1133,8 +1106,8 @@ public class Performance {
       }
       EventId other = (EventId) otherObj;
       return this.eventTimeMs == other.eventTimeMs
-          && this.eventType == other.eventType
-          && this.eventSubtype == other.eventSubtype;
+              && this.eventType == other.eventType
+              && this.eventSubtype == other.eventSubtype;
     }
 
     @Override
@@ -1157,30 +1130,30 @@ public class Performance {
           break;
         case EVENT_TYPE_FINGERPRINT_GESTURE:
           subtypeString =
-              AccessibilityServiceCompatUtils.fingerprintGestureIdToString(eventSubtype);
+                  AccessibilityServiceCompatUtils.fingerprintGestureIdToString(eventSubtype);
           break;
         case EVENT_TYPE_KEY_COMBO:
           subtypeString =
-              String.format(Locale.getDefault(Category.FORMAT), "KEY_COMBO_%d", eventSubtype);
+                  String.format(Locale.getDefault(Category.FORMAT), "KEY_COMBO_%d", eventSubtype);
           break;
         case EVENT_TYPE_ROTATE:
           subtypeString = orientationToSymbolicName(eventSubtype);
           break;
         case EVENT_TYPE_VOLUME_KEY_COMBO:
           subtypeString =
-              String.format(
-                  Locale.getDefault(Category.FORMAT), "VOLUME_KEY_COMBO_%d", eventSubtype);
+                  String.format(
+                          Locale.getDefault(Category.FORMAT), "VOLUME_KEY_COMBO_%d", eventSubtype);
           break;
 
         default:
           subtypeString = Integer.toString(eventSubtype);
       }
       return "type:"
-          + EVENT_TYPE_NAMES.get(eventType)
-          + " subtype:"
-          + subtypeString
-          + " time:"
-          + eventTimeMs;
+              + EVENT_TYPE_NAMES.get(eventType)
+              + " subtype:"
+              + subtypeString
+              + " time:"
+              + eventTimeMs;
     }
   }
 
@@ -1221,10 +1194,10 @@ public class Performance {
     private long timeFeedbackOutput = -1;
 
     private EventData(
-        long timeReceivedAtTalkback,
-        long uptimeReceivedAtTalkback,
-        String[] labels,
-        EventId eventId) {
+            long timeReceivedAtTalkback,
+            long uptimeReceivedAtTalkback,
+            String[] labels,
+            EventId eventId) {
       this.labels = labels;
       this.eventId = eventId;
       this.timeReceivedAtTalkback = timeReceivedAtTalkback;
@@ -1266,16 +1239,16 @@ public class Performance {
     @Override
     public String toString() {
       return " labels="
-          + TextUtils.join(",", labels)
-          + " timeReceivedAtTalkback="
-          + timeReceivedAtTalkback
-          + " mTimeFeedbackQueued="
-          + timeFeedbackQueued
-          + " mTimeFeedbackOutput="
-          + timeFeedbackOutput
-          + " timeInlineHandled="
-          + timeInlineHandled
-          + String.format(" mUtteranceId=%s", utteranceId);
+              + TextUtils.join(",", labels)
+              + " timeReceivedAtTalkback="
+              + timeReceivedAtTalkback
+              + " mTimeFeedbackQueued="
+              + timeFeedbackQueued
+              + " mTimeFeedbackOutput="
+              + timeFeedbackOutput
+              + " timeInlineHandled="
+              + timeInlineHandled
+              + String.format(" mUtteranceId=%s", utteranceId);
     }
   }
 

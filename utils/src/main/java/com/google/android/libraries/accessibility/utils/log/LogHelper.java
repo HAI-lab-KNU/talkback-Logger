@@ -1,6 +1,5 @@
 package com.google.android.libraries.accessibility.utils.log;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 import android.util.Log;
@@ -12,16 +11,16 @@ import com.j256.ormlite.support.ConnectionSource;
 import com.j256.ormlite.table.TableUtils;
 
 import java.sql.SQLException;
-import java.time.LocalDateTime;
 
 public class LogHelper  extends OrmLiteSqliteOpenHelper {
 
     // 데이터베이스 이름과 버전 설정
     private static final String DATABASE_NAME = "SmartPhone Usage.db";
     private static final int DATABASE_VERSION = 1;
+    private static final String TAG = "TalkBackLogger LogHelper";
 
     // DAO 객체 선언 (LogEntry에 대한 데이터베이스 접근을 제공)
-    private Dao<LogEntry, LocalDateTime> logEntryDao = null;
+    private Dao<LoggerUtil.LogEntry, Long> logEntryDao = null;
 
     private static Context instance;
 
@@ -36,7 +35,7 @@ public class LogHelper  extends OrmLiteSqliteOpenHelper {
     public void onCreate(SQLiteDatabase database, ConnectionSource connectionSource) {
         try {
             // 테이블 생성 (LogEntry 클래스에 매핑된 테이블)
-            TableUtils.createTable(connectionSource, LogEntry.class);
+            TableUtils.createTable(connectionSource, LoggerUtil.LogEntry.class);
         } catch (SQLException e) {
             Log.e(LogHelper.class.getName(), "Error creating database", e);
         }
@@ -46,7 +45,7 @@ public class LogHelper  extends OrmLiteSqliteOpenHelper {
     @Override
     public void onUpgrade(SQLiteDatabase database, ConnectionSource connectionSource, int oldVersion, int newVersion) {
         try {
-            TableUtils.dropTable(connectionSource, LogEntry.class, true);
+            TableUtils.dropTable(connectionSource, LoggerUtil.LogEntry.class, true);
             onCreate(database, connectionSource);
         } catch (SQLException e) {
             Log.e(LogHelper.class.getName(), "Error upgrading database", e);
@@ -54,9 +53,9 @@ public class LogHelper  extends OrmLiteSqliteOpenHelper {
     }
 
     // LogEntry DAO 객체 반환
-    public Dao<LogEntry, LocalDateTime> getLogEntryDao() throws SQLException {
+    public Dao<LoggerUtil.LogEntry, Long> getLogEntryDao() throws SQLException {
         if (logEntryDao == null) {
-            logEntryDao = getDao(LogEntry.class);
+            logEntryDao = getDao(LoggerUtil.LogEntry.class);
         }
         return logEntryDao;
     }
@@ -67,24 +66,23 @@ public class LogHelper  extends OrmLiteSqliteOpenHelper {
         super.close();
         logEntryDao = null;
     }
-    public static void SavetoLocalDB(LogEntry logEntry) {
+    public static String SavetoLocalDB(LoggerUtil.LogEntry logEntry) {
         // OpenHelperManager를 통해 LogHelper 인스턴스를 얻음
         LogHelper logHelper = OpenHelperManager.getHelper(instance, LogHelper.class);
 
         try {
             // LogEntry를 데이터베이스에 저장
-            Dao<LogEntry, LocalDateTime> logEntryDao = logHelper.getLogEntryDao();
-            String logEntryString = logEntry.toString().replace("\n","\\n");
-            Log.d("CHECK! DB","Success to save! - "+logEntryString);
+            Dao<LoggerUtil.LogEntry, Long> logEntryDao = logHelper.getLogEntryDao();
             logEntryDao.create(logEntry);
         } catch (SQLException e) {
             e.printStackTrace();
+            return "Fail save to DB";
             // 예외 처리 로직 추가 가능
         } finally {
             // 리소스 해제
             OpenHelperManager.releaseHelper();
+
         }
+        return logEntry.timestamp+" : "+logEntry.msg;
     }
-
-
 }

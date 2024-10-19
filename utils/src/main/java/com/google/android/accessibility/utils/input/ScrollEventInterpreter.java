@@ -46,8 +46,9 @@ import java.util.Objects;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-import com.google.android.libraries.accessibility.utils.log.LogEntry;
 import com.google.android.libraries.accessibility.utils.log.LogHelper;
+import com.google.android.libraries.accessibility.utils.log.LoggerUtil;
+
 /**
  * Interprets {@link AccessibilityEvent#TYPE_VIEW_SCROLLED} and {@link
  * AccessibilityEvent#TYPE_WINDOW_CONTENT_CHANGED} with scroll position information.
@@ -257,10 +258,7 @@ public class ScrollEventInterpreter implements AccessibilityEventListener {
         notifyListenersWithInterpretation(event, interpretation, eventId);
         //noti: Log Scroll Direction
         if(interpretation.scrollDirection != ScrollEventInterpretation.DEFAULT_INTERPRETATION.scrollDirection){
-          LogEntry logEntry = new LogEntry();
-          logEntry.setScrollDirection(interpretation.scrollDirection);
-          LogHelper.SavetoLocalDB(logEntry);
-          Log.d("CHECK! Scroll",TraversalStrategyUtils.directionToString(interpretation.scrollDirection));
+          LoggerUtil.i(System.currentTimeMillis(),LoggerUtil.DOMAIN_SCROLL_EVENT_INTERPRETER,"Scroll Direction : %d",interpretation.scrollDirection);
         }
         break;
       default:
