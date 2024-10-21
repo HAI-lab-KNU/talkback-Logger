@@ -2,7 +2,10 @@ package com.google.android.libraries.accessibility.utils.log;
 
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
+import android.os.Message;
 import android.util.Log;
+
+import androidx.annotation.NonNull;
 
 import com.j256.ormlite.android.apptools.OpenHelperManager;
 import com.j256.ormlite.android.apptools.OrmLiteSqliteOpenHelper;
@@ -11,6 +14,9 @@ import com.j256.ormlite.support.ConnectionSource;
 import com.j256.ormlite.table.TableUtils;
 
 import java.sql.SQLException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class LogHelper  extends OrmLiteSqliteOpenHelper {
 
@@ -19,14 +25,18 @@ public class LogHelper  extends OrmLiteSqliteOpenHelper {
     private static final int DATABASE_VERSION = 1;
     private static final String TAG = "TalkBackLogger LogHelper";
 
+    private static final ExecutorService executor = Executors.newSingleThreadExecutor();  // 싱글 스레드 풀 생성
+
     // DAO 객체 선언 (LogEntry에 대한 데이터베이스 접근을 제공)
     private Dao<LoggerUtil.LogEntry, Long> logEntryDao = null;
 
     private static Context instance;
 
+
     public LogHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
         instance = context;
+
     }
 
     // 데이터베이스를 처음 생성할 때 호출
@@ -65,22 +75,36 @@ public class LogHelper  extends OrmLiteSqliteOpenHelper {
         super.close();
         logEntryDao = null;
     }
+    private static boolean flag = false;
     public static String SavetoLocalDB(LoggerUtil.LogEntry logEntry) {
-        // OpenHelperManager를 통해 LogHelper 인스턴스를 얻음
-        LogHelper logHelper = OpenHelperManager.getHelper(instance, LogHelper.class);
-
+        executor.submit(new Runnable() {
+            @Override
+            public void run() {
+                // 데이터베이스에 로그를 저장하는 작업
+                LogHelper logHelper = OpenHelperManager.getHelper(instance, LogHelper.class);
+                try {
+                    Dao<LoggerUtil.LogEntry, Long> logEntryDao = logHelper.getLogEntryDao();
+                    logEntryDao.create(logEntry);  // 로그 항목을 데이터베이스에 저장
+                    flag=true;
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                    flag=false;
+                } finally {
+                    OpenHelperManager.releaseHelper();  // 데이터베이스 연결 해제
+                }
+            }
+        });
+        return flag? "Success save to Local DB: "+logEntry.msg:"Fail save to Local DB: " + logEntry.msg;
+    }
+    // ExecutorService를 안전하게 종료하는 메서드
+    public static void shutdownExecutor() {
+        executor.shutdown();  // 더 이상 새로운 작업을 받지 않음
         try {
-            // LogEntry를 데이터베이스에 저장
-            Dao<LoggerUtil.LogEntry, Long> logEntryDao = logHelper.getLogEntryDao();
-            logEntryDao.create(logEntry);
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return "Fail save to Local DB ("+e+"): " + logEntry.msg;
-            // 예외 처리 로직 추가 가능
-        } finally {
-            // 리소스 해제
-            OpenHelperManager.releaseHelper();
+            if (!executor.awaitTermination(60, TimeUnit.SECONDS)) {  // 작업이 종료될 때까지 최대 60초 대기
+                executor.shutdownNow();  // 대기 시간이 초과되면 즉시 종료
+            }
+        } catch (InterruptedException e) {
+            executor.shutdownNow();  // 예외 발생 시 즉시 종료
         }
-        return "Success save to Local DB"+logEntry.timestamp+" : "+logEntry.msg;
     }
 }

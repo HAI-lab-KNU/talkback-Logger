@@ -43,6 +43,7 @@ import static com.google.android.accessibility.utils.gestures.GestureManifold.GE
 import static com.google.android.accessibility.utils.output.SpeechControllerImpl.CAPITAL_LETTERS_TYPE_SPEAK_CAP;
 import static java.util.Arrays.stream;
 
+import android.Manifest;
 import android.Manifest.permission;
 import android.accessibilityservice.AccessibilityGestureEvent;
 import android.accessibilityservice.AccessibilityService;
@@ -50,6 +51,7 @@ import android.accessibilityservice.AccessibilityServiceInfo;
 import android.accessibilityservice.FingerprintGestureController;
 import android.accessibilityservice.FingerprintGestureController.FingerprintGestureCallback;
 import android.accessibilityservice.TouchInteractionController;
+import android.app.Activity;
 import android.app.NotificationManager;
 import android.content.BroadcastReceiver;
 import android.content.ClipboardManager;
@@ -58,9 +60,9 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
+import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.content.res.Resources;
-import android.graphics.Rect;
 import android.media.AudioManager;
 import android.os.Build;
 import android.os.Build.VERSION;
@@ -71,15 +73,19 @@ import android.os.SystemClock;
 import android.provider.Settings;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.Voice;
+import android.telephony.TelephonyManager;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.Display;
 import android.view.KeyEvent;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
+
 import androidx.annotation.VisibleForTesting;
 import androidx.core.content.ContextCompat;
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat;
+import androidx.core.app.ActivityCompat;
+
 import com.google.android.accessibility.braille.brailledisplay.BrailleDisplay;
 import com.google.android.accessibility.braille.interfaces.BrailleImeForTalkBack;
 import com.google.android.accessibility.braille.interfaces.ScreenReaderActionPerformer;
@@ -233,6 +239,8 @@ import com.google.android.accessibility.utils.output.SpeechController;
 import com.google.android.accessibility.utils.output.SpeechController.UtteranceCompleteRunnable;
 import com.google.android.accessibility.utils.output.SpeechControllerImpl;
 import com.google.android.accessibility.utils.output.SpeechControllerImpl.CapitalLetterHandlingMethod;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.libraries.accessibility.utils.concurrent.HandlerExecutor;
 import com.google.android.libraries.accessibility.utils.log.LogHelper;
 import com.google.android.libraries.accessibility.utils.log.LogUtils;
@@ -241,6 +249,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
@@ -257,8 +268,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
-import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** An {@link AccessibilityService} that provides spoken, haptic, and audible feedback. */
 public class TalkBackService extends AccessibilityService
@@ -687,11 +696,13 @@ public class TalkBackService extends AccessibilityService
 
   private static StringBuilder sb;
 
-  private DatabaseReference databaseRef;
+
   private Handler handler;
   private Runnable heartBeatTask;
-  private Long experimenterNumber = 12345L;
-
+  private String experimenterNumber;
+  private DatabaseReference dbRef;
+  private Long indexOfFirebase = 0L;
+  private static final int PERMISSION_REQUEST_CODE = 100;
   @Override
   public void onCreate() {
     bootReceiver = new BootReceiver();
@@ -700,36 +711,41 @@ public class TalkBackService extends AccessibilityService
 
     //noti
     // Firebase 초기화
-    android.os.Debug.waitForDebugger();
-    FirebaseApp.initializeApp(this);
-    if (FirebaseApp.getInstance() != null) {
-      Log.d("Firebase", "Firebase initialized successfully.");
+    //android.os.Debug.waitForDebugger();
+
+    dbRef = FirebaseDatabase.getInstance().getReference();
+    if ( dbRef!= null) {
+      // 10분마다 HeartBeat 전송을 위한 Handler 초기화
+      handler = new Handler(Looper.getMainLooper());
+
+      // HeartBeat 전송 작업 정의
+      heartBeatTask = new Runnable() {
+        @Override
+        public void run() {
+          if(prefs!=null){
+            experimenterNumber = prefs.getString("pref_experimenter_number","not yet");
+            if(!experimenterNumber.equals("not yet")) {
+              Log.d("Firebase", "Running Runnable() --> run()");
+              sendHeartBeat();
+            }
+            else {Log.d("Firebase", "experimenterNumber == null");}}
+          // 10분(600,000 밀리초)마다 반복 실행
+          handler.postDelayed(this, 3600000); // 1시간 = 3,600,000 밀리초
+        }
+      };
+
+      // 처음에 HeartBeat 즉시 전송
+      handler.post(heartBeatTask);
+
     } else {
       Log.e("Firebase", "Firebase initialization failed.");
     }
-    databaseRef = FirebaseDatabase.getInstance().getReferenceFromUrl("https://talkback-logger-default-rtdb.firebaseio.com/");
 
-    // 10분마다 HeartBeat 전송을 위한 Handler 초기화
-    handler = new Handler(Looper.getMainLooper());
-
-    // HeartBeat 전송 작업 정의
-    heartBeatTask = new Runnable() {
-      @Override
-      public void run() {
-        Log.d("Firebase", "Running Runnable() --> run()");
-        sendHeartBeat();
-        // 10분(600,000 밀리초)마다 반복 실행
-        handler.postDelayed(this, 30000); // 10분 = 600,000 밀리초
-      }
-    };
-
-    // 처음에 HeartBeat 즉시 전송
-    handler.post(heartBeatTask);
 
     this.setTheme(R.style.TalkbackBaseTheme);
     instance = this;
     try(LogHelper logHelper = new LogHelper(this)){
-      Log.d("CHECK!","LogerHelper Success to Assignment");
+      Log.d("CHECK!","LoggerHelper Success to Assignment");
     }catch (Exception e){
       e.printStackTrace();
     }
@@ -740,19 +756,23 @@ public class TalkBackService extends AccessibilityService
 
   // HeartBeat를 Firebase Realtime Database에 전송하는 메서드
   private void sendHeartBeat() {
-    Log.d("Firebase", "Running sendHeartBeat()");
     // 현재 시간과 실험자 번호로 HeartBeat 데이터 생성
-    Map<String, Long> heartBeatData = new HashMap<>();
+    Map<String, Long> heartBeatData = new HashMap<>(); // 로깅 인덱스
     heartBeatData.put("timestamp", System.currentTimeMillis());  // 현재 시간
-    heartBeatData.put("experimenter_number", experimenterNumber);  // 실험자 번호
-    Log.d("Firebase", "Data : "+heartBeatData);
     // Firebase에 HeartBeat 데이터 전송
-    databaseRef.push().setValue(heartBeatData)
-            .addOnSuccessListener(aVoid -> LoggerUtil.i(System.currentTimeMillis(),DOMAIN, "HeartBeat sent successfully"))
-            .addOnFailureListener(e -> LoggerUtil.e(System.currentTimeMillis(),DOMAIN, "HeartBeat sent Fail"));
+    dbRef.child(experimenterNumber).child((indexOfFirebase++).toString()).setValue(heartBeatData).addOnSuccessListener(new OnSuccessListener<Void>() {
+              @Override
+              public void onSuccess(Void aVoid) {
+                Log.d("Firebase", "Data added successfully under userId: " + experimenterNumber);
+              }
+            })
+            .addOnFailureListener(new OnFailureListener() {
+              @Override
+              public void onFailure(@NonNull Exception e) {
+                Log.e("Firebase", "Failed to add data", e);
+              }
+            });
   }
-
-
   /**
    * Calculates the volume for {@link SpeechControllerImpl#setSpeechVolume(float)} when announcing
    * "TalkBack off".
@@ -905,6 +925,7 @@ public class TalkBackService extends AccessibilityService
           .putBoolean(getString(R.string.pref_talkback_gesture_detection_key), false)
           .apply();
     }
+    LogHelper.shutdownExecutor();
   }
 
   @Override
@@ -986,7 +1007,7 @@ public class TalkBackService extends AccessibilityService
     if (event.getEventType() == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
             event.getEventType() == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
 
-      sb.append(String.format("Window Changed : %b",true));
+      sb.append(String.format("Window Changed : %b; ",true));
       // 루트 노드 가져오기
       AccessibilityNodeInfo rootNode = getRootInActiveWindow();
       if (rootNode != null) {
@@ -994,7 +1015,7 @@ public class TalkBackService extends AccessibilityService
         List<AccessibilityNodeInfo> nodeInfos = getAllNodes(rootNode);
         int index = 0;
         for (AccessibilityNodeInfo nodeInfo : nodeInfos) {
-          sb.append(String.format("ChildrenNodes %d : %s", index++,nodeInfos));
+          sb.append(String.format("ChildrenNodes %d : %s; ", index++,nodeInfos));
         }
       } else {
         sb.append(String.format("No Child Nodes"));
@@ -1003,7 +1024,7 @@ public class TalkBackService extends AccessibilityService
     if(eventType == AccessibilityEvent.TYPE_VIEW_ACCESSIBILITY_FOCUSED) {
       AccessibilityNodeInfo nodeInfo = event.getSource();
       if (nodeInfo != null) {
-        sb.append(String.format("Current Node : %s",nodeInfo));
+        sb.append(String.format("Current Node : %s; ",nodeInfo));
       } else {
         sb.append(String.format("CurrentNode is null"));
       }

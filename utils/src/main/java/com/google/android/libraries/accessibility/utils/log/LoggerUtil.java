@@ -35,6 +35,15 @@ public class LoggerUtil {
             this.msg = msg;
         }
 
+        @Override
+        public String toString() {
+            return "LogEntry{" +
+                    "timestamp=" + timestamp +
+                    ", level=" + level +
+                    ", domain=" + domain +
+                    ", msg='" + msg + '\'' +
+                    '}';
+        }
     }
 
     public static final int LEVEL_VERBOSE = 0;

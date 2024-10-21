@@ -16,6 +16,7 @@
 
 package com.google.android.accessibility.talkback.preference.base;
 
+import android.app.AlertDialog;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -29,7 +30,10 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.provider.Settings;
 import androidx.fragment.app.FragmentManager;
+
+import android.text.InputType;
 import android.util.Log;
+import android.widget.EditText;
 import android.widget.Toast;
 import androidx.preference.ListPreference;
 import androidx.preference.Preference;
@@ -76,6 +80,11 @@ public class DeveloperPrefFragment extends TalkbackBaseFragment {
   /** Flag whether content-observer is watching system touch-explore setting. */
   private boolean contentObserverRegistered = false;
 
+  private static final String KEY_EXPERIMENTER_NUMBER = "pref_experimenter_number";
+
+  private Preference experimenterNumberPref;
+  private boolean isNumberSet = false;
+
   public DeveloperPrefFragment() {
     super(R.xml.developer_preferences);
   }
@@ -96,6 +105,26 @@ public class DeveloperPrefFragment extends TalkbackBaseFragment {
     context = getContext();
     fragmentManager = getActivity().getSupportFragmentManager();
     prefs = SharedPreferencesUtils.getSharedPreferences(context);
+    // 실험자 번호 설정 타일 참조
+    experimenterNumberPref = findPreference(KEY_EXPERIMENTER_NUMBER);
+
+    // 초기 설정 값 로드
+    String savedNumber = prefs.getString(KEY_EXPERIMENTER_NUMBER, "미설정");
+    experimenterNumberPref.setSummary(savedNumber);
+
+    if (!savedNumber.equals("미설정")) {
+      experimenterNumberPref.setEnabled(false); // 설정된 경우 비활성화
+      isNumberSet = true;
+    }
+
+    // 타일 클릭 리스너 설정
+    experimenterNumberPref.setOnPreferenceClickListener(preference -> {
+      if (!isNumberSet) {
+        showNumberInputDialog();
+      }
+      return true;
+    });
+
 
     initVersionInfo();
 
@@ -251,7 +280,35 @@ public class DeveloperPrefFragment extends TalkbackBaseFragment {
 
     updateDisplayForDiagnosisMode();
   }
+  // 숫자 입력 다이얼로그
+  private void showNumberInputDialog() {
+    final EditText input = new EditText(getActivity());
+    input.setInputType(InputType.TYPE_CLASS_NUMBER);
 
+    new AlertDialog.Builder(getActivity())
+            .setTitle("실험자 번호 설정")
+            .setMessage("숫자를 입력하세요.")
+            .setView(input)
+            .setPositiveButton("확인", (dialog, which) -> {
+              String experimenterNumber = input.getText().toString();
+              if (!experimenterNumber.isEmpty()) {
+                // 값이 유효하면 저장 및 타일 업데이트
+                SharedPreferences.Editor editor = prefs.edit();
+                editor.putString(KEY_EXPERIMENTER_NUMBER, experimenterNumber);
+                editor.apply();
+
+                experimenterNumberPref.setSummary(experimenterNumber);
+                experimenterNumberPref.setEnabled(false); // 다시 설정할 수 없도록 비활성화
+                isNumberSet = true;
+
+                Toast.makeText(getActivity(), "실험자 번호가 설정되었습니다.", Toast.LENGTH_SHORT).show();
+              } else {
+                Toast.makeText(getActivity(), "유효한 번호를 입력하세요.", Toast.LENGTH_SHORT).show();
+              }
+            })
+            .setNegativeButton("취소", (dialog, which) -> dialog.cancel())
+            .show();
+  }
   private static boolean shouldShowVersionInSubtitle() {
     // Watch does not have action bar.
     // TV does have an action bar but it doesn't support a subtitle.

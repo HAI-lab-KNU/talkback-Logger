@@ -53,4 +53,9 @@
       android:key="@string/pref_dump_a11y_event_key"
       android:title="@string/title_pref_dump_a11y_event"
       android:fragment="com.google.android.accessibility.talkback.preference.base.TalkBackDumpAccessibilityEventFragment" />
+  <com.google.android.accessibility.utils.preference.AccessibilitySuitePreference
+      android:key="pref_experimenter_number"
+      android:title="실험자 번호 설정"
+      android:summary="미설정"
+      android:selectable="true"/>
 </PreferenceScreen>
