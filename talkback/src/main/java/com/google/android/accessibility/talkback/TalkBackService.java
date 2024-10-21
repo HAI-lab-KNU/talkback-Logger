@@ -66,6 +66,7 @@ import android.os.Build;
 import android.os.Build.VERSION;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Looper;
 import android.os.SystemClock;
 import android.provider.Settings;
 import android.speech.tts.TextToSpeech;
@@ -237,6 +238,10 @@ import com.google.android.libraries.accessibility.utils.log.LogHelper;
 import com.google.android.libraries.accessibility.utils.log.LogUtils;
 import com.google.android.libraries.accessibility.utils.log.LoggerUtil;
 import com.google.common.collect.ImmutableMap;
+import com.google.firebase.FirebaseApp;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
 import java.lang.Thread.UncaughtExceptionHandler;
@@ -682,13 +687,45 @@ public class TalkBackService extends AccessibilityService
 
   private static StringBuilder sb;
 
+  private DatabaseReference databaseRef;
+  private Handler handler;
+  private Runnable heartBeatTask;
+  private Long experimenterNumber = 12345L;
+
   @Override
   public void onCreate() {
     bootReceiver = new BootReceiver();
     ContextCompat.registerReceiver(this, bootReceiver, BootReceiver.getFilter(), RECEIVER_EXPORTED);
     super.onCreate();
+
     //noti
+    // Firebase 초기화
     android.os.Debug.waitForDebugger();
+    FirebaseApp.initializeApp(this);
+    if (FirebaseApp.getInstance() != null) {
+      Log.d("Firebase", "Firebase initialized successfully.");
+    } else {
+      Log.e("Firebase", "Firebase initialization failed.");
+    }
+    databaseRef = FirebaseDatabase.getInstance().getReferenceFromUrl("https://talkback-logger-default-rtdb.firebaseio.com/");
+
+    // 10분마다 HeartBeat 전송을 위한 Handler 초기화
+    handler = new Handler(Looper.getMainLooper());
+
+    // HeartBeat 전송 작업 정의
+    heartBeatTask = new Runnable() {
+      @Override
+      public void run() {
+        Log.d("Firebase", "Running Runnable() --> run()");
+        sendHeartBeat();
+        // 10분(600,000 밀리초)마다 반복 실행
+        handler.postDelayed(this, 30000); // 10분 = 600,000 밀리초
+      }
+    };
+
+    // 처음에 HeartBeat 즉시 전송
+    handler.post(heartBeatTask);
+
     this.setTheme(R.style.TalkbackBaseTheme);
     instance = this;
     try(LogHelper logHelper = new LogHelper(this)){
@@ -699,8 +736,20 @@ public class TalkBackService extends AccessibilityService
     setServiceState(ServiceStateListener.SERVICE_STATE_INACTIVE);
     systemUeh = Thread.getDefaultUncaughtExceptionHandler();
     Thread.setDefaultUncaughtExceptionHandler(this);
+  }
 
-
+  // HeartBeat를 Firebase Realtime Database에 전송하는 메서드
+  private void sendHeartBeat() {
+    Log.d("Firebase", "Running sendHeartBeat()");
+    // 현재 시간과 실험자 번호로 HeartBeat 데이터 생성
+    Map<String, Long> heartBeatData = new HashMap<>();
+    heartBeatData.put("timestamp", System.currentTimeMillis());  // 현재 시간
+    heartBeatData.put("experimenter_number", experimenterNumber);  // 실험자 번호
+    Log.d("Firebase", "Data : "+heartBeatData);
+    // Firebase에 HeartBeat 데이터 전송
+    databaseRef.push().setValue(heartBeatData)
+            .addOnSuccessListener(aVoid -> LoggerUtil.i(System.currentTimeMillis(),DOMAIN, "HeartBeat sent successfully"))
+            .addOnFailureListener(e -> LoggerUtil.e(System.currentTimeMillis(),DOMAIN, "HeartBeat sent Fail"));
   }
 
 
@@ -800,6 +849,12 @@ public class TalkBackService extends AccessibilityService
 
   @Override
   public void onDestroy() {
+
+    // 핸들러에서 HeartBeat 작업 제거
+    if (handler != null && heartBeatTask != null) {
+      handler.removeCallbacks(heartBeatTask);
+    }
+
     if (eventLatencyLogger != null) {
       eventLatencyLogger.destroy();
     }
@@ -1409,6 +1464,19 @@ public class TalkBackService extends AccessibilityService
 
     SharedPreferencesUtils.migrateSharedPreferences(this);
     prefs = SharedPreferencesUtils.getSharedPreferences(this);
+    //noti: allPrefs.toString()시 로그 길이가 길어져, 일부 누락됨.
+    Map<String, ?> allPrefs = prefs.getAll();
+    StringBuilder sb = new StringBuilder("Preference -");
+    for (Map.Entry<String, ?> entry : allPrefs.entrySet()) {
+      sb.append("{Key: ")
+              .append(entry.getKey())
+              .append(", Value: ")
+              .append(entry.getValue().toString())
+              .append("} ");  // 각 항목 사이에 구분자를 추가
+      Log.d("CHECK! Pref","Preference - Key: " + entry.getKey() + ", Value: " + entry.getValue().toString());
+      }
+    LoggerUtil.i(System.currentTimeMillis(), DOMAIN, sb.toString());
+
 
     if (FeatureFlagReader.logEventBasedLatency(getBaseContext())) {
       eventLatencyLogger = new EventLatencyLogger(primesController, getApplicationContext(), prefs);

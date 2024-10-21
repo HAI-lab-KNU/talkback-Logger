@@ -39,6 +39,8 @@ import com.google.android.accessibility.talkback.preference.base.PreferenceActio
 import com.google.android.accessibility.talkback.speech.SpeakPasswordsManager;
 import com.google.android.accessibility.utils.SharedPreferencesUtils;
 
+import java.util.Map;
+
 /** Fragment to display advanced settings. 고급설정 */
 public class AdvancedSettingFragment extends TalkbackBaseFragment {
   private static final String TAG = "AdvancedSettingFragment";
@@ -69,8 +71,8 @@ public class AdvancedSettingFragment extends TalkbackBaseFragment {
     if (timeFeedbackFormatPref != null) {
       timeFeedbackFormatPref.setSummaryProvider(preference -> getSummaryForTimeFeedbackFormat());
     }
-
-    Log.d("CHECK! Pref",timeFeedbackFormatPref.toString());
+//    //noti:
+//    Log.d("CHECK! Pref",timeFeedbackFormatPref.toString());
   }
 
   private String getSummaryForTimeFeedbackFormat() {
@@ -157,7 +159,6 @@ public class AdvancedSettingFragment extends TalkbackBaseFragment {
 
     context = getContext();
     prefs = SharedPreferencesUtils.getSharedPreferences(context);
-
     // Link preferences to web-viewer. The behavior depends on the type of form factors.
     if (findPreference(getString(R.string.pref_policy_key)) != null) {
       PreferenceActionHelper.assignWebIntentToPreference(

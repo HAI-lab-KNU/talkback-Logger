@@ -29,7 +29,6 @@ public class LogHelper  extends OrmLiteSqliteOpenHelper {
         instance = context;
     }
 
-
     // 데이터베이스를 처음 생성할 때 호출
     @Override
     public void onCreate(SQLiteDatabase database, ConnectionSource connectionSource) {
@@ -76,13 +75,12 @@ public class LogHelper  extends OrmLiteSqliteOpenHelper {
             logEntryDao.create(logEntry);
         } catch (SQLException e) {
             e.printStackTrace();
-            return "Fail save to DB";
+            return "Fail save to Local DB ("+e+"): " + logEntry.msg;
             // 예외 처리 로직 추가 가능
         } finally {
             // 리소스 해제
             OpenHelperManager.releaseHelper();
-
         }
-        return logEntry.timestamp+" : "+logEntry.msg;
+        return "Success save to Local DB"+logEntry.timestamp+" : "+logEntry.msg;
     }
 }

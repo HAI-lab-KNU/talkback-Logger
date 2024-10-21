@@ -10,10 +10,10 @@ public class LoggerUtil {
     private static final String TAG = "TalkBackLogger Logger";
     public static class LogEntry{
 
-        @DatabaseField(generatedId= true)
+        @DatabaseField(generatedId= true,index = true)
         long id;
 
-        @DatabaseField(index = true)
+        @DatabaseField
         long timestamp;
 
         @DatabaseField
@@ -60,15 +60,17 @@ public class LoggerUtil {
 
 
     public static void i(long timestamp, int domain, String format, @Nullable Object... args) {
-        if(args == null)
-            Log.i(TAG,LogHelper.SavetoLocalDB(new LogEntry(timestamp, LEVEL_INFO, domain, format)));
-        else
-            Log.i(TAG,LogHelper.SavetoLocalDB(new LogEntry(timestamp, LEVEL_INFO, domain, String.format(format, args))));
+        if(format != null)
+            if(args == null)
+                Log.i(TAG+" - "+domain,LogHelper.SavetoLocalDB(new LogEntry(timestamp, LEVEL_INFO, domain, format)));
+            else
+                Log.i(TAG+" - "+domain,LogHelper.SavetoLocalDB(new LogEntry(timestamp, LEVEL_INFO, domain, String.format(format, args))));
     }
     public static void e(long timestamp, int domain, String format, @Nullable Object... args) {
-        if(args == null)
-            Log.e(TAG,LogHelper.SavetoLocalDB(new LogEntry(timestamp, LEVEL_ERROR, domain, format)));
-        else
-            Log.e(TAG,LogHelper.SavetoLocalDB(new LogEntry(timestamp, LEVEL_ERROR, domain, String.format(format, args))));
+        if(format != null)
+            if(args == null)
+                Log.e(TAG+" - "+domain,LogHelper.SavetoLocalDB(new LogEntry(timestamp, LEVEL_ERROR, domain, format)));
+            else
+                Log.e(TAG+" - "+domain,LogHelper.SavetoLocalDB(new LogEntry(timestamp, LEVEL_ERROR, domain, String.format(format, args))));
     }
 }

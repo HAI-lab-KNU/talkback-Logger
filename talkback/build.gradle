@@ -1,5 +1,6 @@
 apply plugin: 'com.android.library'
 apply from: "../shared.gradle"
+apply plugin: 'com.google.gms.google-services'
 
 dependencies {
     implementation project(':proguard')
@@ -7,6 +8,11 @@ dependencies {
     implementation project(':brailleime')
     implementation project(':brailleinterfaces')
     implementation project(':brailledisplay')
+
+
+    // Add the dependency for the Realtime Database library
+    // When using the BoM, you don't specify versions in Firebase library dependencies
+    implementation("com.google.firebase:firebase-database:21.0.0")
 }
 
 android {
