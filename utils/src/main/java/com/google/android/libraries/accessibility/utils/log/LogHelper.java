@@ -2,10 +2,9 @@ package com.google.android.libraries.accessibility.utils.log;
 
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
-import android.os.Message;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
-
-import androidx.annotation.NonNull;
 
 import com.j256.ormlite.android.apptools.OpenHelperManager;
 import com.j256.ormlite.android.apptools.OrmLiteSqliteOpenHelper;
@@ -13,10 +12,13 @@ import com.j256.ormlite.dao.Dao;
 import com.j256.ormlite.support.ConnectionSource;
 import com.j256.ormlite.table.TableUtils;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.sql.SQLException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.List;
+import java.util.Locale;
 
 public class LogHelper  extends OrmLiteSqliteOpenHelper {
 
@@ -25,17 +27,31 @@ public class LogHelper  extends OrmLiteSqliteOpenHelper {
     private static final int DATABASE_VERSION = 1;
     private static final String TAG = "TalkBackLogger LogHelper";
 
-    private static final ExecutorService executor = Executors.newSingleThreadExecutor();  // 싱글 스레드 풀 생성
 
     // DAO 객체 선언 (LogEntry에 대한 데이터베이스 접근을 제공)
     private Dao<LoggerUtil.LogEntry, Long> logEntryDao = null;
 
     private static Context instance;
 
+    private static long lastBackupTimestamp = System.currentTimeMillis();
+    // 1시간(3600000 밀리초)마다 백업
+    private static final long BACKUP_INTERVAL = 3600000;
+    private static Handler backupHandler;
+    private static Runnable backupTask;
+    private static SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy년 MM월 dd일 HH시 mm분 ss초", Locale.getDefault());
 
     public LogHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
         instance = context;
+        if(backupHandler == null) backupHandler= new Handler(Looper.getMainLooper());
+        if(backupTask==null) backupTask = new Runnable() {
+            @Override
+            public void run() {
+                backupDatabase();  // 백업 작업 실행
+                backupHandler.postDelayed(this, BACKUP_INTERVAL);  // 1시간 후 다시 실행
+            }
+        };
+
 
     }
 
@@ -75,36 +91,75 @@ public class LogHelper  extends OrmLiteSqliteOpenHelper {
         super.close();
         logEntryDao = null;
     }
-    private static boolean flag = false;
+
     public static String SavetoLocalDB(LoggerUtil.LogEntry logEntry) {
-        executor.submit(new Runnable() {
-            @Override
-            public void run() {
-                // 데이터베이스에 로그를 저장하는 작업
-                LogHelper logHelper = OpenHelperManager.getHelper(instance, LogHelper.class);
-                try {
-                    Dao<LoggerUtil.LogEntry, Long> logEntryDao = logHelper.getLogEntryDao();
-                    logEntryDao.create(logEntry);  // 로그 항목을 데이터베이스에 저장
-                    flag=true;
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                    flag=false;
-                } finally {
-                    OpenHelperManager.releaseHelper();  // 데이터베이스 연결 해제
-                }
-            }
-        });
-        return flag? "Success save to Local DB: "+logEntry.msg:"Fail save to Local DB: " + logEntry.msg;
-    }
-    // ExecutorService를 안전하게 종료하는 메서드
-    public static void shutdownExecutor() {
-        executor.shutdown();  // 더 이상 새로운 작업을 받지 않음
+        // 데이터베이스에 로그를 저장하는 작업
+        LogHelper logHelper = OpenHelperManager.getHelper(instance, LogHelper.class);
         try {
-            if (!executor.awaitTermination(60, TimeUnit.SECONDS)) {  // 작업이 종료될 때까지 최대 60초 대기
-                executor.shutdownNow();  // 대기 시간이 초과되면 즉시 종료
-            }
-        } catch (InterruptedException e) {
-            executor.shutdownNow();  // 예외 발생 시 즉시 종료
+            Dao<LoggerUtil.LogEntry, Long> logEntryDao = logHelper.getLogEntryDao();
+            logEntryDao.create(logEntry);  // 로그 항목을 데이터베이스에 저장
+
+            lastBackupTimestamp = System.currentTimeMillis();// 로그 저장 시, 마지막 저장 시간 기록
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return "Fail save to Local DB (" + e + "): " + logEntry.msg;
         }
+        return "Success save to Local DB: " + logEntry.msg;
+    }
+
+    public static void backupDatabase() {
+        LogHelper logHelper = OpenHelperManager.getHelper(instance, LogHelper.class);
+        try {
+            Dao<LoggerUtil.LogEntry, Long> logEntryDao = logHelper.getLogEntryDao();
+
+            // 마지막 백업 시점 이후에 저장된 로그만 가져옴
+            List<LoggerUtil.LogEntry> newLogs = logEntryDao.queryBuilder()
+                    .where().ge("timestamp", lastBackupTimestamp)  // 마지막 백업 이후의 로그만
+                    .query();
+
+            // 새 백업 파일에 새로운 로그 저장 (백업 파일명: log_backup_<현재 시간>.db)
+            String backupFileName = "log_backup_" + dateFormat.format(new Date(System.currentTimeMillis())) + ".db";
+            saveLogsToBackupFile(newLogs, backupFileName);
+
+            // 마지막 백업 시점을 업데이트
+            lastBackupTimestamp = System.currentTimeMillis();
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void saveLogsToBackupFile(List<LoggerUtil.LogEntry> logs, String backupFileName) {
+        // 백업 파일에 로그를 저장하는 로직 구현
+        // 백업 파일을 생성하고, logs 리스트를 파일에 저장
+        // 예: 파일 출력 스트림을 사용하여 .db 형식의 백업 파일 생성
+        try {
+            // 파일 입출력 처리 예시
+            File backupFile = new File(instance.getFilesDir(), backupFileName);
+            FileOutputStream fos = new FileOutputStream(backupFile);
+
+            for (LoggerUtil.LogEntry log : logs) {
+                String logData = log.toString() + "\n";  // 로그 내용을 파일에 저장할 형식으로 변환
+                fos.write(logData.getBytes());
+            }
+
+            fos.close();
+            Log.i(TAG, "Backup completed: " + backupFileName);
+        } catch (Exception e) {
+            e.printStackTrace();
+            Log.e(TAG, "Failed to create backup file: " + e.getMessage());
+        }
+    }
+    // 백업 작업을 시작하는 메서드
+    public static void startBackupTask() {
+        backupHandler.post(backupTask);  // 즉시 첫 백업 실행
+    }
+
+    // 백업 작업을 중지하는 메서드
+    public static void stopBackupTask() {
+        backupHandler.removeCallbacks(backupTask);  // 백업 작업 취소
+    }
+    public static void releaseHelper(){
+        OpenHelperManager.releaseHelper();
     }
 }

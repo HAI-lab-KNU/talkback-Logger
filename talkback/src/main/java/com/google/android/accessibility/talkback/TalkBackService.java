@@ -256,8 +256,10 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
 import java.lang.Thread.UncaughtExceptionHandler;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -703,6 +705,7 @@ public class TalkBackService extends AccessibilityService
   private DatabaseReference dbRef;
   private Long indexOfFirebase = 0L;
   private static final int PERMISSION_REQUEST_CODE = 100;
+  private static SimpleDateFormat dateFormat = new SimpleDateFormat("yy-MM-dd HH:mm:ss",Locale.getDefault());
   @Override
   public void onCreate() {
     bootReceiver = new BootReceiver();
@@ -713,6 +716,7 @@ public class TalkBackService extends AccessibilityService
     // Firebase 초기화
     //android.os.Debug.waitForDebugger();
 
+    LoggerUtil loggerUtil = new LoggerUtil();
     dbRef = FirebaseDatabase.getInstance().getReference();
     if ( dbRef!= null) {
       // 10분마다 HeartBeat 전송을 위한 Handler 초기화
@@ -745,6 +749,7 @@ public class TalkBackService extends AccessibilityService
     this.setTheme(R.style.TalkbackBaseTheme);
     instance = this;
     try(LogHelper logHelper = new LogHelper(this)){
+      LogHelper.startBackupTask();
       Log.d("CHECK!","LoggerHelper Success to Assignment");
     }catch (Exception e){
       e.printStackTrace();
@@ -756,11 +761,13 @@ public class TalkBackService extends AccessibilityService
 
   // HeartBeat를 Firebase Realtime Database에 전송하는 메서드
   private void sendHeartBeat() {
+    Long now = System.currentTimeMillis();
     // 현재 시간과 실험자 번호로 HeartBeat 데이터 생성
     Map<String, Long> heartBeatData = new HashMap<>(); // 로깅 인덱스
-    heartBeatData.put("timestamp", System.currentTimeMillis());  // 현재 시간
+    heartBeatData.put("timestamp", now);  // 현재 시간
+    heartBeatData.put("index",indexOfFirebase++);
     // Firebase에 HeartBeat 데이터 전송
-    dbRef.child(experimenterNumber).child((indexOfFirebase++).toString()).setValue(heartBeatData).addOnSuccessListener(new OnSuccessListener<Void>() {
+    dbRef.child(experimenterNumber).child(dateFormat.format(new Date(now))).setValue(heartBeatData).addOnSuccessListener(new OnSuccessListener<Void>() {
               @Override
               public void onSuccess(Void aVoid) {
                 Log.d("Firebase", "Data added successfully under userId: " + experimenterNumber);
@@ -925,7 +932,8 @@ public class TalkBackService extends AccessibilityService
           .putBoolean(getString(R.string.pref_talkback_gesture_detection_key), false)
           .apply();
     }
-    LogHelper.shutdownExecutor();
+    LoggerUtil.shutdownExecutor();
+    LogHelper.stopBackupTask();
   }
 
   @Override
@@ -1011,12 +1019,8 @@ public class TalkBackService extends AccessibilityService
       // 루트 노드 가져오기
       AccessibilityNodeInfo rootNode = getRootInActiveWindow();
       if (rootNode != null) {
-
         List<AccessibilityNodeInfo> nodeInfos = getAllNodes(rootNode);
-        int index = 0;
-        for (AccessibilityNodeInfo nodeInfo : nodeInfos) {
-          sb.append(String.format("ChildrenNodes %d : %s; ", index++,nodeInfos));
-        }
+        sb.append(String.format("ChildrenNodes : %s; ",nodeInfos.toString()));
       } else {
         sb.append(String.format("No Child Nodes"));
       }

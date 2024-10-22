@@ -4,7 +4,7 @@
   <com.google.android.accessibility.utils.preference.AccessibilitySuitePreference
       android:key="@string/pref_developer_version_code_key"
       android:title="@string/title_pref_version_code"
-      android:selectable="false"/>
+      android:selectable="true"/>
   <com.google.android.accessibility.utils.preference.AccessibilitySuiteSwitchPreference
       android:defaultValue="@bool/pref_diagnosis_mode_default"
       android:key="@string/pref_diagnosis_mode_key"
@@ -57,5 +57,7 @@
       android:key="pref_experimenter_number"
       android:title="실험자 번호 설정"
       android:summary="미설정"
-      android:selectable="true"/>
+      android:dialogTitle="실험자 번호 설정"
+      android:inputType="number"
+      android:visible="false"/>
 </PreferenceScreen>

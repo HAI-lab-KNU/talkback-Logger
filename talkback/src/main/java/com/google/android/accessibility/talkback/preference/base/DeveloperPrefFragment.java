@@ -81,9 +81,9 @@ public class DeveloperPrefFragment extends TalkbackBaseFragment {
   private boolean contentObserverRegistered = false;
 
   private static final String KEY_EXPERIMENTER_NUMBER = "pref_experimenter_number";
-
   private Preference experimenterNumberPref;
-  private boolean isNumberSet = false;
+  private int versionCodeClickCount = 0; // Version Code 클릭 카운트
+  private static final int MAX_CLICK_COUNT = 11; // 클릭 횟수 제한
 
   public DeveloperPrefFragment() {
     super(R.xml.developer_preferences);
@@ -105,26 +105,6 @@ public class DeveloperPrefFragment extends TalkbackBaseFragment {
     context = getContext();
     fragmentManager = getActivity().getSupportFragmentManager();
     prefs = SharedPreferencesUtils.getSharedPreferences(context);
-    // 실험자 번호 설정 타일 참조
-    experimenterNumberPref = findPreference(KEY_EXPERIMENTER_NUMBER);
-
-    // 초기 설정 값 로드
-    String savedNumber = prefs.getString(KEY_EXPERIMENTER_NUMBER, "미설정");
-    experimenterNumberPref.setSummary(savedNumber);
-
-    if (!savedNumber.equals("미설정")) {
-      experimenterNumberPref.setEnabled(false); // 설정된 경우 비활성화
-      isNumberSet = true;
-    }
-
-    // 타일 클릭 리스너 설정
-    experimenterNumberPref.setOnPreferenceClickListener(preference -> {
-      if (!isNumberSet) {
-        showNumberInputDialog();
-      }
-      return true;
-    });
-
 
     initVersionInfo();
 
@@ -134,10 +114,44 @@ public class DeveloperPrefFragment extends TalkbackBaseFragment {
 
     final @Nullable Preference prefVersion =
         findPreference(getString(R.string.pref_developer_version_code_key));
-    if (!shouldShowVersionInSubtitle() && (prefVersion != null) && (versionInfo != null)) {
-      prefVersion.setSummary(versionInfo);
-    } else {
-      getPreferenceScreen().removePreference(prefVersion);
+    if(prefVersion !=null) {
+      if (!shouldShowVersionInSubtitle() && (versionInfo != null)) {
+        prefVersion.setSummary(versionInfo);
+      } else {
+        getPreferenceScreen().removePreference(prefVersion);
+      }
+      prefVersion.setOnPreferenceClickListener(preference -> {
+        versionCodeClickCount++;
+        if (versionCodeClickCount == MAX_CLICK_COUNT-3) {
+          Toast.makeText(context, "활성화 혹은 비활성화까지 3회 남았습니다.", Toast.LENGTH_SHORT).show();
+        }
+        else if(versionCodeClickCount == MAX_CLICK_COUNT-2){
+          Toast.makeText(context, "활성화 혹은 비활성화까지 2회 남았습니다.", Toast.LENGTH_SHORT).show();
+        }
+        else if(versionCodeClickCount == MAX_CLICK_COUNT-1){
+          Toast.makeText(context, "활성화 혹은 비활성화까지 1회 남았습니다.", Toast.LENGTH_SHORT).show();
+        }
+        else if (versionCodeClickCount >= MAX_CLICK_COUNT) {
+          Toast.makeText(context, "활성화 혹은 비활성화 되었습니다.", Toast.LENGTH_SHORT).show();
+          toggleExperimenterNumberPrefVisibility();
+          versionCodeClickCount = 0; // 카운트 초기화
+        }
+        return true;
+      });
+    }
+
+    // 실험자 번호 설정 타일 초기화
+    experimenterNumberPref = findPreference(KEY_EXPERIMENTER_NUMBER);
+    if (experimenterNumberPref != null) {
+      experimenterNumberPref.setVisible(false);
+      experimenterNumberPref.setOnPreferenceClickListener(preference -> {
+        showExperimenterNumberDialog();
+        return true;
+      });
+
+      // 저장된 실험자 번호가 있으면 부제목을 업데이트
+      String savedNumber = prefs.getString(KEY_EXPERIMENTER_NUMBER, "미설정");
+      experimenterNumberPref.setSummary(savedNumber);
     }
 
     // Initialize preference dialogs.
@@ -280,35 +294,7 @@ public class DeveloperPrefFragment extends TalkbackBaseFragment {
 
     updateDisplayForDiagnosisMode();
   }
-  // 숫자 입력 다이얼로그
-  private void showNumberInputDialog() {
-    final EditText input = new EditText(getActivity());
-    input.setInputType(InputType.TYPE_CLASS_NUMBER);
 
-    new AlertDialog.Builder(getActivity())
-            .setTitle("실험자 번호 설정")
-            .setMessage("숫자를 입력하세요.")
-            .setView(input)
-            .setPositiveButton("확인", (dialog, which) -> {
-              String experimenterNumber = input.getText().toString();
-              if (!experimenterNumber.isEmpty()) {
-                // 값이 유효하면 저장 및 타일 업데이트
-                SharedPreferences.Editor editor = prefs.edit();
-                editor.putString(KEY_EXPERIMENTER_NUMBER, experimenterNumber);
-                editor.apply();
-
-                experimenterNumberPref.setSummary(experimenterNumber);
-                experimenterNumberPref.setEnabled(false); // 다시 설정할 수 없도록 비활성화
-                isNumberSet = true;
-
-                Toast.makeText(getActivity(), "실험자 번호가 설정되었습니다.", Toast.LENGTH_SHORT).show();
-              } else {
-                Toast.makeText(getActivity(), "유효한 번호를 입력하세요.", Toast.LENGTH_SHORT).show();
-              }
-            })
-            .setNegativeButton("취소", (dialog, which) -> dialog.cancel())
-            .show();
-  }
   private static boolean shouldShowVersionInSubtitle() {
     // Watch does not have action bar.
     // TV does have an action bar but it doesn't support a subtitle.
@@ -390,6 +376,43 @@ public class DeveloperPrefFragment extends TalkbackBaseFragment {
     context.getContentResolver().registerContentObserver(uri, false, touchExploreObserver);
     contentObserverRegistered = true;
   }
+
+  // 타일 보이기/숨기기 토글
+  private void toggleExperimenterNumberPrefVisibility() {
+    if (experimenterNumberPref != null) {
+      boolean isVisible = experimenterNumberPref.isVisible();
+      experimenterNumberPref.setVisible(!isVisible); // 보이거나 숨기기
+    }
+  }
+
+  // 실험자 번호 입력 다이얼로그 표시
+  private void showExperimenterNumberDialog() {
+    AlertDialog.Builder builder = new AlertDialog.Builder(context);
+    builder.setTitle("실험자 번호 설정");
+
+    // 숫자 입력을 위한 EditText
+    final EditText input = new EditText(context);
+    input.setInputType(InputType.TYPE_CLASS_NUMBER);
+    builder.setView(input);
+
+    // 확인 버튼 클릭 시 입력된 값을 부제목에 표시
+    builder.setPositiveButton("확인", (dialog, which) -> {
+      String experimenterNumber = input.getText().toString();
+      if (!experimenterNumber.isEmpty()) {
+        experimenterNumberPref.setSummary(experimenterNumber); // 부제목 업데이트
+
+        // SharedPreferences에 값 저장
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putString(KEY_EXPERIMENTER_NUMBER, experimenterNumber);
+        editor.apply();
+      }
+    });
+
+    builder.setNegativeButton("취소", (dialog, which) -> dialog.cancel());
+
+    builder.show();
+  }
+
 
   @Override
   public void onPause() {

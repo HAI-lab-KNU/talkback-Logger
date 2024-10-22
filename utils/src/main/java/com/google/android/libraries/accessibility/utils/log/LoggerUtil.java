@@ -6,6 +6,10 @@ import com.j256.ormlite.field.DatabaseField;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+
 public class LoggerUtil {
     private static final String TAG = "TalkBackLogger Logger";
     public static class LogEntry{
@@ -66,20 +70,53 @@ public class LoggerUtil {
 
     public static final int DOMAIN_TALKBACK_PREFERENCE_FRAGMENT  = 4;
 
+    private static ExecutorService executor;
 
+
+    public LoggerUtil() {
+        if(executor == null)
+            executor = Executors.newSingleThreadExecutor();
+    }
 
     public static void i(long timestamp, int domain, String format, @Nullable Object... args) {
-        if(format != null)
-            if(args == null)
-                Log.i(TAG+" - "+domain,LogHelper.SavetoLocalDB(new LogEntry(timestamp, LEVEL_INFO, domain, format)));
-            else
-                Log.i(TAG+" - "+domain,LogHelper.SavetoLocalDB(new LogEntry(timestamp, LEVEL_INFO, domain, String.format(format, args))));
+        if(executor!=null)
+            executor.submit(() -> {
+                if (format != null)
+                    if (args == null || args.length == 0)
+                        Log.i(TAG + " - " + domain, LogHelper.SavetoLocalDB(new LogEntry(timestamp, LEVEL_INFO, domain, format)));
+                    else
+                        Log.i(TAG + " - " + domain, LogHelper.SavetoLocalDB(new LogEntry(timestamp, LEVEL_INFO, domain, String.format(format, args))));
+            });
     }
     public static void e(long timestamp, int domain, String format, @Nullable Object... args) {
-        if(format != null)
-            if(args == null)
-                Log.e(TAG+" - "+domain,LogHelper.SavetoLocalDB(new LogEntry(timestamp, LEVEL_ERROR, domain, format)));
-            else
-                Log.e(TAG+" - "+domain,LogHelper.SavetoLocalDB(new LogEntry(timestamp, LEVEL_ERROR, domain, String.format(format, args))));
+        if(executor!=null)
+            executor.submit(() -> {
+            if(format != null)
+                if(args == null || args.length == 0)
+                    Log.e(TAG+" - "+domain,LogHelper.SavetoLocalDB(new LogEntry(timestamp, LEVEL_ERROR, domain, format)));
+                else
+                    Log.e(TAG+" - "+domain,LogHelper.SavetoLocalDB(new LogEntry(timestamp, LEVEL_ERROR, domain, String.format(format, args))));
+            });
+    }
+    // ExecutorService를 안전하게 종료하는 메서드
+    public static void shutdownExecutor() {
+        // 새로운 작업을 받지 않도록 종료
+        executor.shutdown();
+
+        // 별도의 스레드에서 작업이 종료될 때까지 비동기적으로 대기
+        new Thread(() -> {
+            try {
+                // 남아 있는 작업이 모두 완료될 때까지 대기
+                while (!executor.isTerminated()) {
+                    Thread.sleep(3000);  // 3초 간격으로 상태 확인
+                }
+                // 모든 작업이 완료되면 shutdownNow 호출
+                executor.shutdownNow();
+                LogHelper.releaseHelper();
+            } catch (InterruptedException e) {
+                executor.shutdownNow();  // 예외 발생 시 즉시 종료
+                Thread.currentThread().interrupt();  // 현재 스레드에 인터럽트 설정
+            }
+        }).start();  // 새로운 스레드 시작
     }
 }
