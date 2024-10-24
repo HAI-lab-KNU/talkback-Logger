@@ -12,13 +12,13 @@ import com.j256.ormlite.dao.Dao;
 import com.j256.ormlite.support.ConnectionSource;
 import com.j256.ormlite.table.TableUtils;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class LogHelper  extends OrmLiteSqliteOpenHelper {
 
@@ -30,7 +30,7 @@ public class LogHelper  extends OrmLiteSqliteOpenHelper {
 
     // DAO 객체 선언 (LogEntry에 대한 데이터베이스 접근을 제공)
     private Dao<LoggerUtil.LogEntry, Long> logEntryDao = null;
-
+    private static final ExecutorService executorService = Executors.newSingleThreadExecutor();
     private static Context instance;
 
     private static long lastBackupTimestamp = System.currentTimeMillis();
@@ -44,12 +44,14 @@ public class LogHelper  extends OrmLiteSqliteOpenHelper {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
         instance = context;
         if(backupHandler == null) backupHandler= new Handler(Looper.getMainLooper());
-        if(backupTask==null) backupTask = new Runnable() {
-            @Override
-            public void run() {
-                backupDatabase();  // 백업 작업 실행
-                backupHandler.postDelayed(this, BACKUP_INTERVAL);  // 1시간 후 다시 실행
-            }
+        if(backupTask==null)
+
+            backupTask = new Runnable() {
+                @Override
+                public void run() {
+                    backupDatabase();  // 백업 작업 실행
+                    backupHandler.postDelayed(this, BACKUP_INTERVAL);  // 1시간 후 다시 실행
+                }
         };
 
 
@@ -98,8 +100,6 @@ public class LogHelper  extends OrmLiteSqliteOpenHelper {
         try {
             Dao<LoggerUtil.LogEntry, Long> logEntryDao = logHelper.getLogEntryDao();
             logEntryDao.create(logEntry);  // 로그 항목을 데이터베이스에 저장
-
-            lastBackupTimestamp = System.currentTimeMillis();// 로그 저장 시, 마지막 저장 시간 기록
         } catch (SQLException e) {
             e.printStackTrace();
             return "Fail save to Local DB (" + e + "): " + logEntry.msg;
@@ -119,7 +119,7 @@ public class LogHelper  extends OrmLiteSqliteOpenHelper {
 
             // 새 백업 파일에 새로운 로그 저장 (백업 파일명: log_backup_<현재 시간>.db)
             String backupFileName = "log_backup_" + dateFormat.format(new Date(System.currentTimeMillis())) + ".db";
-            saveLogsToBackupFile(newLogs, backupFileName);
+            BackupToFile(newLogs, backupFileName,logEntryDao);
 
             // 마지막 백업 시점을 업데이트
             lastBackupTimestamp = System.currentTimeMillis();
@@ -129,26 +129,21 @@ public class LogHelper  extends OrmLiteSqliteOpenHelper {
         }
     }
 
-    private static void saveLogsToBackupFile(List<LoggerUtil.LogEntry> logs, String backupFileName) {
+    private static void BackupToFile(List<LoggerUtil.LogEntry> logs, String backupFileName, Dao<LoggerUtil.LogEntry, Long> logEntryDao) {
         // 백업 파일에 로그를 저장하는 로직 구현
         // 백업 파일을 생성하고, logs 리스트를 파일에 저장
-        // 예: 파일 출력 스트림을 사용하여 .db 형식의 백업 파일 생성
-        try {
-            // 파일 입출력 처리 예시
-            File backupFile = new File(instance.getFilesDir(), backupFileName);
-            FileOutputStream fos = new FileOutputStream(backupFile);
-
-            for (LoggerUtil.LogEntry log : logs) {
-                String logData = log.toString() + "\n";  // 로그 내용을 파일에 저장할 형식으로 변환
-                fos.write(logData.getBytes());
+        //todo : LogEntry 형식으로 저장.
+        executorService.submit(()->{
+            try {
+                for (LoggerUtil.LogEntry log : logs) {
+                    logEntryDao.create(log);
+                }
+                Log.i(TAG, "Backup completed: " + backupFileName);
+            } catch (Exception e) {
+                e.printStackTrace();
+                Log.e(TAG, "Failed to create backup file: " + e.getMessage());
             }
-
-            fos.close();
-            Log.i(TAG, "Backup completed: " + backupFileName);
-        } catch (Exception e) {
-            e.printStackTrace();
-            Log.e(TAG, "Failed to create backup file: " + e.getMessage());
-        }
+        });
     }
     // 백업 작업을 시작하는 메서드
     public static void startBackupTask() {
@@ -161,5 +156,6 @@ public class LogHelper  extends OrmLiteSqliteOpenHelper {
     }
     public static void releaseHelper(){
         OpenHelperManager.releaseHelper();
+        executorService.shutdown();
     }
 }

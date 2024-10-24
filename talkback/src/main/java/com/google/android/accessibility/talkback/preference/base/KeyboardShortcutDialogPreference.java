@@ -33,10 +33,12 @@ import com.google.android.accessibility.talkback.TalkBackService;
 import com.google.android.accessibility.talkback.keyboard.KeyComboManager;
 import com.google.android.accessibility.talkback.keyboard.KeyComboModel;
 import com.google.android.accessibility.talkback.preference.PreferencesActivityUtils;
+import com.google.android.accessibility.talkback.preference.PrefrenceLogger;
 import com.google.android.accessibility.utils.Performance.EventId;
 import com.google.android.accessibility.utils.ServiceKeyEventListener;
 import com.google.android.accessibility.utils.material.A11yAlertDialogWrapper;
 import com.google.android.accessibility.utils.material.MaterialComponentUtils;
+import com.google.android.libraries.accessibility.utils.log.LoggerUtil;
 
 /**
  * A {@link Preference} which contains two dialogs, setUpKeyComboDialog and keyAlreadyInUseDialog.
@@ -375,6 +377,7 @@ public class KeyboardShortcutDialogPreference extends Preference
     OnPreferenceChangeListener listener = preference.getOnPreferenceChangeListener();
     if (listener != null) {
       listener.onPreferenceChange(preference, newValue);
+      LoggerUtil.i(System.currentTimeMillis(),LoggerUtil.DOMAIN_TALKBACK_PREFERENCE, PrefrenceLogger.Log(key,newValue));
     }
   }
 

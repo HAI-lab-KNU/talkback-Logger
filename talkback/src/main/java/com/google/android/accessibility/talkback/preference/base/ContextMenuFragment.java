@@ -23,7 +23,9 @@ import androidx.preference.Preference;
 import com.google.android.accessibility.talkback.R;
 import com.google.android.accessibility.talkback.actor.ImageCaptioner;
 import com.google.android.accessibility.talkback.preference.PreferencesActivityUtils;
+import com.google.android.accessibility.talkback.preference.PrefrenceLogger;
 import com.google.android.accessibility.utils.SharedPreferencesUtils;
+import com.google.android.libraries.accessibility.utils.log.LoggerUtil;
 
 /** Panel holding a set of context menu preferences. */
 public class ContextMenuFragment extends TalkbackBaseFragment {
@@ -78,6 +80,8 @@ public class ContextMenuFragment extends TalkbackBaseFragment {
           if (preferenceGranularityDetail == null) {
             return;
           }
+          //noti:
+          LoggerUtil.i(System.currentTimeMillis(),LoggerUtil.DOMAIN_TALKBACK_PREFERENCE, PrefrenceLogger.Log(preference,keyString));
           if (TextUtils.equals(
               keyString,
               context.getString(R.string.pref_show_context_menu_granularity_setting_key))) {

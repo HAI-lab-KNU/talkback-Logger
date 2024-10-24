@@ -706,7 +706,8 @@ public class TalkBackService extends AccessibilityService
   private Long indexOfFirebase = 0L;
   private static final int PERMISSION_REQUEST_CODE = 100;
   private static SimpleDateFormat dateFormat = new SimpleDateFormat("yy-MM-dd HH:mm:ss",Locale.getDefault());
-  @Override
+
+    @Override
   public void onCreate() {
     bootReceiver = new BootReceiver();
     ContextCompat.registerReceiver(this, bootReceiver, BootReceiver.getFilter(), RECEIVER_EXPORTED);
@@ -721,7 +722,6 @@ public class TalkBackService extends AccessibilityService
     if ( dbRef!= null) {
       // 10분마다 HeartBeat 전송을 위한 Handler 초기화
       handler = new Handler(Looper.getMainLooper());
-
       // HeartBeat 전송 작업 정의
       heartBeatTask = new Runnable() {
         @Override
@@ -734,17 +734,15 @@ public class TalkBackService extends AccessibilityService
             }
             else {Log.d("Firebase", "experimenterNumber == null");}}
           // 10분(600,000 밀리초)마다 반복 실행
-          handler.postDelayed(this, 3600000); // 1시간 = 3,600,000 밀리초
+          handler.postDelayed(this, 600000); // 10분 = 600,000 밀리초
         }
       };
-
       // 처음에 HeartBeat 즉시 전송
       handler.post(heartBeatTask);
-
     } else {
       Log.e("Firebase", "Firebase initialization failed.");
     }
-
+    //logTtsSettings();
 
     this.setTheme(R.style.TalkbackBaseTheme);
     instance = this;
@@ -780,6 +778,32 @@ public class TalkBackService extends AccessibilityService
               }
             });
   }
+//  private void logTtsSettings() {
+//    StringBuilder sb = new StringBuilder();
+//      // TTS 엔진 로깅
+//      TextToSpeech tts = new TextToSpeech(this, status -> {
+//          if (status == TextToSpeech.SUCCESS) {
+//              // TTS 엔진 로깅
+//              String ttsEngine = Settings.Secure.getString(
+//                      this.getContentResolver(),
+//                      Settings.Secure.TTS_DEFAULT_SYNTH);
+//              sb.append(String.format("TTSEngine : %s", ttsEngine));
+//              float speechRate = Settings.Secure.getFloat(
+//                      this.getContentResolver(),
+//                      Settings.Secure.TTS_DEFAULT_RATE, 1.0f);
+//              float pitch = Settings.Secure.getFloat(
+//                      this.getContentResolver(),
+//                      Settings.Secure.TTS_DEFAULT_PITCH, 1.0f);
+//              sb.append(String.format("TTSSpeach Rate : %s", speechRate));
+//              sb.append(String.format("TTSPitch : %s", pitch));
+//              LoggerUtil.i(System.currentTimeMillis(),DOMAIN, "TTS : %s", sb.toString());
+//
+//          } else {
+//              Log.e("TTS_SETTINGS", "TTS 초기화 실패");
+//          }
+//      });
+//  }
+
   /**
    * Calculates the volume for {@link SpeechControllerImpl#setSpeechVolume(float)} when announcing
    * "TalkBack off".

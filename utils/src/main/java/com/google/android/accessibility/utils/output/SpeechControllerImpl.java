@@ -40,6 +40,7 @@ import android.text.Spanned;
 import android.text.TextUtils;
 import android.text.style.ReplacementSpan;
 import android.text.style.TtsSpan;
+import android.util.Log;
 import android.util.Range;
 import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
@@ -54,6 +55,8 @@ import com.google.android.accessibility.utils.StringBuilderUtils;
 import com.google.android.accessibility.utils.braille.BrailleUnicode;
 import com.google.android.accessibility.utils.output.FailoverTextToSpeech.SpeechParam;
 import com.google.android.libraries.accessibility.utils.log.LogUtils;
+import com.google.android.libraries.accessibility.utils.log.LoggerUtil;
+
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.ArrayList;
@@ -361,6 +364,7 @@ public class SpeechControllerImpl implements SpeechController {
   }
 
   public void setSpeechRate(float speechRate) {
+    LoggerUtil.i(System.currentTimeMillis(),LoggerUtil.DOMAIN_SPEECH_CONTROLLER,"TTS speech Rate in Talkback : %f",speechRate);
     mSpeechRate = speechRate;
   }
 

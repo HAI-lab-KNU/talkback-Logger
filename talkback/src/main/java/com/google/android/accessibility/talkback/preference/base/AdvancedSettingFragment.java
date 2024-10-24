@@ -35,9 +35,11 @@ import com.google.android.accessibility.talkback.R;
 import com.google.android.accessibility.talkback.RingerModeAndScreenMonitor;
 import com.google.android.accessibility.talkback.TalkBackService;
 import com.google.android.accessibility.talkback.focusmanagement.FocusProcessorForTapAndTouchExploration.TypingMethod;
+import com.google.android.accessibility.talkback.preference.PrefrenceLogger;
 import com.google.android.accessibility.talkback.preference.base.PreferenceActionHelper.WebPage;
 import com.google.android.accessibility.talkback.speech.SpeakPasswordsManager;
 import com.google.android.accessibility.utils.SharedPreferencesUtils;
+import com.google.android.libraries.accessibility.utils.log.LoggerUtil;
 
 import java.util.Map;
 
@@ -191,6 +193,8 @@ public class AdvancedSettingFragment extends TalkbackBaseFragment {
       longPressDuration.setEnabled(typingMethod != DOUBLE_TAP);
       typingPreference.setOnPreferenceChangeListener(
           (preference, newValue) -> {
+            //noti:
+            LoggerUtil.i(System.currentTimeMillis(),LoggerUtil.DOMAIN_TALKBACK_PREFERENCE, PrefrenceLogger.Log(preference.getKey(),newValue));
             longPressDuration.setEnabled(Integer.parseInt((String) newValue) != DOUBLE_TAP);
             return true;
           });

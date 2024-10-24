@@ -68,4 +68,9 @@ public abstract class BasePreferencesFragment extends PreferenceFragmentCompat {
   public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
     PreferenceSettingsUtils.addPreferencesFromResource(this, getXmlResId());
   }
+
+  @Override
+  public void onDestroyView() {
+    super.onDestroyView();
+  }
 }

@@ -43,12 +43,15 @@ import com.google.android.accessibility.talkback.FeatureFlagReader;
 import com.google.android.accessibility.talkback.R;
 import com.google.android.accessibility.talkback.TalkBackService;
 import com.google.android.accessibility.talkback.preference.PreferencesActivityUtils;
+import com.google.android.accessibility.talkback.preference.PrefrenceLogger;
 import com.google.android.accessibility.utils.AccessibilityEventUtils;
 import com.google.android.accessibility.utils.FeatureSupport;
 import com.google.android.accessibility.utils.FormFactorUtils;
 import com.google.android.accessibility.utils.SharedPreferencesUtils;
 import com.google.android.accessibility.utils.material.A11yAlertDialogWrapper;
 import com.google.android.libraries.accessibility.utils.log.LogUtils;
+import com.google.android.libraries.accessibility.utils.log.LoggerUtil;
+
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Fragment holding a set of developer preferences. */
@@ -519,7 +522,8 @@ public class DeveloperPrefFragment extends TalkbackBaseFragment {
         @Override
         public boolean onPreferenceChange(Preference preference, Object newValue) {
           final boolean requestedState = Boolean.TRUE.equals(newValue);
-
+          //noti:
+          LoggerUtil.i(System.currentTimeMillis(),LoggerUtil.DOMAIN_TALKBACK_PREFERENCE,PrefrenceLogger.Log(preference.getKey(),newValue));
           // If the user is trying to turn touch exploration off, show
           // a confirmation dialog and don't change anything.
           if (!requestedState) {
@@ -604,7 +608,8 @@ public class DeveloperPrefFragment extends TalkbackBaseFragment {
       new OnPreferenceChangeListener() {
         @Override
         public boolean onPreferenceChange(Preference preference, Object newValue) {
-
+          //noti:
+          LoggerUtil.i(System.currentTimeMillis(),LoggerUtil.DOMAIN_TALKBACK_PREFERENCE,PrefrenceLogger.Log(preference.getKey(),newValue));
           // If the user is trying to turn node tree debugging on, show
           // a confirmation dialog and don't change anything.
           if (Boolean.TRUE.equals(newValue)) {
@@ -627,6 +632,8 @@ public class DeveloperPrefFragment extends TalkbackBaseFragment {
       new OnPreferenceChangeListener() {
         @Override
         public boolean onPreferenceChange(Preference preference, Object newValue) {
+          //noti:
+          LoggerUtil.i(System.currentTimeMillis(),LoggerUtil.DOMAIN_TALKBACK_PREFERENCE,PrefrenceLogger.Log(preference.getKey(),newValue));
           // If the user is enabling performance statistics... show confirmation dialog.
           if (Boolean.TRUE.equals(newValue)) {
             performanceStatsDialog.show();
@@ -645,6 +652,8 @@ public class DeveloperPrefFragment extends TalkbackBaseFragment {
       new OnPreferenceChangeListener() {
         @Override
         public boolean onPreferenceChange(Preference preference, Object newValue) {
+          //noti:
+          LoggerUtil.i(System.currentTimeMillis(),LoggerUtil.DOMAIN_TALKBACK_PREFERENCE,PrefrenceLogger.Log(preference.getKey(),newValue));
           // If the user is trying to extend log level, shows a confirmation dialog and don't change
           // anything.
           logOptInLevel = Integer.parseInt((String) newValue);

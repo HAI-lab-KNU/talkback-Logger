@@ -180,6 +180,10 @@ public class TalkBackPreferenceFragment extends TalkbackBaseFragment {
   @Override
   public void onDestroyView() {
     super.onDestroyView();
+
+    //noti: Loging TTS Setting
+    logTtsSettings();
+
     hatsSurveyRequester.ifPresent(requester -> requester.setOnSurveyAvailableListener(null));
   }
 
@@ -225,8 +229,6 @@ public class TalkBackPreferenceFragment extends TalkbackBaseFragment {
       category.removePreference(ttsSettingsPreference);
     }
 
-    //noti: Loging TTS Setting
-    logTtsSettings();
 
     ttsSettingsPreference.setIntent(ttsSettingsIntent);
   }
@@ -243,32 +245,22 @@ public class TalkBackPreferenceFragment extends TalkbackBaseFragment {
         String ttsEngine = Settings.Secure.getString(
                 requireContext().getContentResolver(),
                 Settings.Secure.TTS_DEFAULT_SYNTH);
-        sb.append(String.format("TTSEngine : %s",ttsEngine));
+        sb.append(String.format("TTSEngine : %s; ",ttsEngine));
         float speechRate = Settings.Secure.getFloat(
                 requireContext().getContentResolver(),
                 Settings.Secure.TTS_DEFAULT_RATE, 1.0f);
         float pitch = Settings.Secure.getFloat(
                 requireContext().getContentResolver(),
                 Settings.Secure.TTS_DEFAULT_PITCH, 1.0f);
-        sb.append(String.format("TTSSpeach Rate : %s",speechRate));
-        sb.append(String.format("TTSPitch : %s",pitch));
-        LoggerUtil.i(System.currentTimeMillis(),LoggerUtil.DOMAIN_TALKBACK_PREFERENCE_FRAGMENT,"TTS : %s",sb.toString());
+        sb.append(String.format("TTSSpeach Rate : %s; ",speechRate));
+        sb.append(String.format("TTSPitch : %s; ",pitch));
+        LoggerUtil.i(System.currentTimeMillis(),LoggerUtil.DOMAIN_TALKBACK_PREFERENCE,"TTS : %s",sb.toString());
 
       } else {
         Log.e("TTS_SETTINGS", "TTS 초기화 실패");
       }
     });
   }
-  /** 시스템 설정에서 TTS 속성 값 가져오기 */
-  private float getTtsSettingFloat(String settingName, float defaultValue) {
-      return Settings.Secure.getFloat(
-              requireContext().getContentResolver(),
-              settingName,
-              defaultValue
-      );
-  }
-
-
 
   private void assignNewFeaturesIntent() {
     final Preference prefNewFeatures =

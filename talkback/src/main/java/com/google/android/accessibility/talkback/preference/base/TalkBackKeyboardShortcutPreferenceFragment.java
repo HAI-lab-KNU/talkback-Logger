@@ -21,6 +21,8 @@ import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.util.Log;
+
 import androidx.preference.ListPreference;
 import androidx.preference.Preference;
 import androidx.preference.Preference.OnPreferenceChangeListener;
@@ -32,10 +34,14 @@ import com.google.android.accessibility.talkback.TalkBackService.TalkbackService
 import com.google.android.accessibility.talkback.keyboard.KeyComboManager;
 import com.google.android.accessibility.talkback.keyboard.KeyComboModel;
 import com.google.android.accessibility.talkback.preference.PreferencesActivityUtils;
+import com.google.android.accessibility.talkback.preference.PrefrenceLogger;
 import com.google.android.accessibility.talkback.preference.TalkBackPreferenceFilter;
 import com.google.android.accessibility.utils.PreferenceSettingsUtils;
 import com.google.android.accessibility.utils.SharedPreferencesUtils;
 import com.google.android.accessibility.utils.material.A11yAlertDialogWrapper;
+import com.google.android.libraries.accessibility.utils.log.LoggerUtil;
+
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -67,6 +73,8 @@ public class TalkBackKeyboardShortcutPreferenceFragment extends TalkbackBaseFrag
   /** Updates fragment whenever their values change. */
   private final OnSharedPreferenceChangeListener sharedPreferenceChangeListener =
       (prefs, key) -> {
+          //noti: 로깅: 변경된 키와 새로운 값을 출력
+          LoggerUtil.i(System.currentTimeMillis(),LoggerUtil.DOMAIN_TALKBACK_PREFERENCE, PrefrenceLogger.Log(prefs, key));
         if (TextUtils.equals(key, getString(R.string.pref_select_keymap_key))) {
           keymap = getKeymap();
           // Refreshes key combo model after keymap changes.

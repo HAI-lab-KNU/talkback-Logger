@@ -11,7 +11,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 public class LoggerUtil {
-    private static final String TAG = "TalkBackLogger Logger";
+    private static final String TAG = "LoggerUtil";
     public static class LogEntry{
 
         @DatabaseField(generatedId= true,index = true)
@@ -68,7 +68,9 @@ public class LoggerUtil {
 
     public static final int DOMAIN_TALKBACK_SERVICE  = 3;
 
-    public static final int DOMAIN_TALKBACK_PREFERENCE_FRAGMENT  = 4;
+    public static final int DOMAIN_TALKBACK_PREFERENCE  = 4;
+
+    public static final int DOMAIN_SPEECH_CONTROLLER=5;
 
     private static ExecutorService executor;
 
@@ -83,9 +85,9 @@ public class LoggerUtil {
             executor.submit(() -> {
                 if (format != null)
                     if (args == null || args.length == 0)
-                        Log.i(TAG + " - " + domain, LogHelper.SavetoLocalDB(new LogEntry(timestamp, LEVEL_INFO, domain, format)));
+                        Log.i(TAG + "-" + domain, LogHelper.SavetoLocalDB(new LogEntry(timestamp, LEVEL_INFO, domain, format)));
                     else
-                        Log.i(TAG + " - " + domain, LogHelper.SavetoLocalDB(new LogEntry(timestamp, LEVEL_INFO, domain, String.format(format, args))));
+                        Log.i(TAG + "-" + domain, LogHelper.SavetoLocalDB(new LogEntry(timestamp, LEVEL_INFO, domain, String.format(format, args))));
             });
     }
     public static void e(long timestamp, int domain, String format, @Nullable Object... args) {
@@ -93,9 +95,9 @@ public class LoggerUtil {
             executor.submit(() -> {
             if(format != null)
                 if(args == null || args.length == 0)
-                    Log.e(TAG+" - "+domain,LogHelper.SavetoLocalDB(new LogEntry(timestamp, LEVEL_ERROR, domain, format)));
+                    Log.e(TAG+"-"+domain,LogHelper.SavetoLocalDB(new LogEntry(timestamp, LEVEL_ERROR, domain, format)));
                 else
-                    Log.e(TAG+" - "+domain,LogHelper.SavetoLocalDB(new LogEntry(timestamp, LEVEL_ERROR, domain, String.format(format, args))));
+                    Log.e(TAG+"-"+domain,LogHelper.SavetoLocalDB(new LogEntry(timestamp, LEVEL_ERROR, domain, String.format(format, args))));
             });
     }
     // ExecutorService를 안전하게 종료하는 메서드
