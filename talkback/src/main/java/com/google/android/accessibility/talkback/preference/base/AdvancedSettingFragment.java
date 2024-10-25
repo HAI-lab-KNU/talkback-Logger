@@ -24,10 +24,6 @@ import android.content.res.Resources;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.text.format.DateFormat;
-import android.util.Log;
-
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.preference.ListPreference;
 import androidx.preference.Preference;
 import androidx.preference.TwoStatePreference;
@@ -35,12 +31,10 @@ import com.google.android.accessibility.talkback.R;
 import com.google.android.accessibility.talkback.RingerModeAndScreenMonitor;
 import com.google.android.accessibility.talkback.TalkBackService;
 import com.google.android.accessibility.talkback.focusmanagement.FocusProcessorForTapAndTouchExploration.TypingMethod;
-import com.google.android.accessibility.talkback.preference.PrefrenceLogger;
+import com.google.android.accessibility.talkback.preference.PreferenceLogger;
 import com.google.android.accessibility.talkback.preference.base.PreferenceActionHelper.WebPage;
 import com.google.android.accessibility.talkback.speech.SpeakPasswordsManager;
 import com.google.android.accessibility.utils.SharedPreferencesUtils;
-import com.google.android.libraries.accessibility.utils.log.LoggerUtil;
-
 import java.util.Map;
 
 /** Fragment to display advanced settings. 고급설정 */
@@ -73,8 +67,6 @@ public class AdvancedSettingFragment extends TalkbackBaseFragment {
     if (timeFeedbackFormatPref != null) {
       timeFeedbackFormatPref.setSummaryProvider(preference -> getSummaryForTimeFeedbackFormat());
     }
-//    //noti:
-//    Log.d("CHECK! Pref",timeFeedbackFormatPref.toString());
   }
 
   private String getSummaryForTimeFeedbackFormat() {
@@ -192,10 +184,7 @@ public class AdvancedSettingFragment extends TalkbackBaseFragment {
               R.string.pref_typing_confirmation_default);
       longPressDuration.setEnabled(typingMethod != DOUBLE_TAP);
       typingPreference.setOnPreferenceChangeListener(
-          (preference, newValue) -> {
-            //noti:
-            LoggerUtil.i(System.currentTimeMillis(),LoggerUtil.DOMAIN_TALKBACK_PREFERENCE, PrefrenceLogger.Log(preference.getKey(),newValue));
-            longPressDuration.setEnabled(Integer.parseInt((String) newValue) != DOUBLE_TAP);
+          (preference, newValue) -> {longPressDuration.setEnabled(Integer.parseInt((String) newValue) != DOUBLE_TAP);
             return true;
           });
     }

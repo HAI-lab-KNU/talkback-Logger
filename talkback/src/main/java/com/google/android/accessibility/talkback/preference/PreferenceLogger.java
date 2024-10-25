@@ -1,11 +1,10 @@
 package com.google.android.accessibility.talkback.preference;
 
 import android.content.SharedPreferences;
-import android.util.Log;
 
 import java.util.Map;
 
-public class PrefrenceLogger {
+public class PreferenceLogger {
 
     /** SharedPreferences에서 해당 키의 값을 가져오는 메서드 */
     private static Object getPreferenceValue(SharedPreferences sharedPreferences, String key) {

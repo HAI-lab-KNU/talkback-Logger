@@ -50,7 +50,6 @@ import com.google.android.accessibility.utils.FeatureSupport;
 import com.google.android.accessibility.utils.FormFactorUtils;
 import com.google.android.accessibility.utils.PreferenceSettingsUtils;
 import com.google.android.accessibility.utils.SettingsUtils;
-import com.google.android.libraries.accessibility.utils.log.LogHelper;
 import com.google.android.libraries.accessibility.utils.log.LoggerUtil;
 
 import java.util.List;

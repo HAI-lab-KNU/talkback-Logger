@@ -23,11 +23,9 @@ import android.text.TextUtils;
 import androidx.preference.Preference;
 import androidx.preference.TwoStatePreference;
 import com.google.android.accessibility.talkback.R;
-import com.google.android.accessibility.talkback.preference.PrefrenceLogger;
 import com.google.android.accessibility.utils.FeatureSupport;
 import com.google.android.accessibility.utils.PreferenceSettingsUtils;
 import com.google.android.accessibility.utils.SharedPreferencesUtils;
-import com.google.android.libraries.accessibility.utils.log.LoggerUtil;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -54,8 +52,6 @@ public class SoundAndVibrationFragment extends TalkbackBaseFragment {
   /** Listens to shared preference changes and updates the preference items accordingly. */
   private final OnSharedPreferenceChangeListener sharedPreferenceChangeListener =
       (sharedPrefs, key) -> {
-        //noti: 로깅: 변경된 키와 새로운 값을 출력
-        LoggerUtil.i(System.currentTimeMillis(),LoggerUtil.DOMAIN_TALKBACK_PREFERENCE, PrefrenceLogger.Log(prefs, key));
         FragmentActivity activity = getActivity();
         if (TextUtils.equals(key, getString(R.string.pref_use_audio_focus_key))) {
           updateTwoStatePreferenceStatus(

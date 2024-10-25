@@ -58,6 +58,7 @@ import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.content.pm.PackageManager;
@@ -175,6 +176,9 @@ import com.google.android.accessibility.talkback.menurules.NodeMenuRuleProcessor
 import com.google.android.accessibility.talkback.monitor.BatteryMonitor;
 import com.google.android.accessibility.talkback.monitor.CallStateMonitor;
 import com.google.android.accessibility.talkback.monitor.InputMethodMonitor;
+import com.google.android.accessibility.talkback.permission.PermissionRequestActivity;
+import com.google.android.accessibility.talkback.permission.PermissionUtils;
+import com.google.android.accessibility.talkback.preference.PreferenceLogger;
 import com.google.android.accessibility.talkback.preference.PreferencesActivityUtils;
 import com.google.android.accessibility.talkback.selector.SelectorController;
 import com.google.android.accessibility.talkback.selector.SelectorController.SelectorEventNotifier;
@@ -472,6 +476,36 @@ public class TalkBackService extends AccessibilityService
     boolean gestureDetector();
   }
 
+  private void checkAndRequestPermission() {
+    // 권한 요청 (여기서는 WRITE_EXTERNAL_STORAGE 예시)
+    String[] permissions = new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE};
+
+    // 권한 요청을 시작
+    PermissionUtils.requestPermissions(this, permissions);
+
+    // BroadcastReceiver를 등록하여 권한 결과 수신
+    registerReceiver(new PermissionResultReceiver(), new IntentFilter(PermissionRequestActivity.ACTION_DONE));
+  }
+
+  // BroadcastReceiver 클래스 내부 구현
+  private class PermissionResultReceiver extends BroadcastReceiver {
+    @Override
+    public void onReceive(Context context, Intent intent) {
+      if (intent.getAction() != null && intent.getAction().equals(PermissionRequestActivity.ACTION_DONE)) {
+        String[] permissions = intent.getStringArrayExtra(PermissionRequestActivity.PERMISSIONS);
+        int[] grantResults = intent.getIntArrayExtra(PermissionRequestActivity.GRANT_RESULTS);
+
+        // 권한 요청 결과 확인
+        if (grantResults != null && grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+          Log.i(TAG, "권한이 허용되었습니다.");
+        } else {
+          Log.i(TAG, "권한이 거부되었습니다.");
+        }
+      }
+    }
+  }
+
+
   /** Whether the user has seen the TalkBack tutorial. */
   public static final String PREF_FIRST_TIME_USER = "first_time_user";
 
@@ -716,7 +750,6 @@ public class TalkBackService extends AccessibilityService
     //noti
     // Firebase 초기화
     //android.os.Debug.waitForDebugger();
-
     LoggerUtil loggerUtil = new LoggerUtil();
     dbRef = FirebaseDatabase.getInstance().getReference();
     if ( dbRef!= null) {
@@ -1513,6 +1546,8 @@ public class TalkBackService extends AccessibilityService
 
     SharedPreferencesUtils.migrateSharedPreferences(this);
     prefs = SharedPreferencesUtils.getSharedPreferences(this);
+
+
     //noti: allPrefs.toString()시 로그 길이가 길어져, 일부 누락됨.
     Map<String, ?> allPrefs = prefs.getAll();
     StringBuilder sb = new StringBuilder("Preference -");
@@ -1525,7 +1560,7 @@ public class TalkBackService extends AccessibilityService
       Log.d("CHECK! Pref","Preference - Key: " + entry.getKey() + ", Value: " + entry.getValue().toString());
       }
     LoggerUtil.i(System.currentTimeMillis(), DOMAIN, sb.toString());
-
+    checkAndRequestPermission();
 
     if (FeatureFlagReader.logEventBasedLatency(getBaseContext())) {
       eventLatencyLogger = new EventLatencyLogger(primesController, getApplicationContext(), prefs);
@@ -3125,7 +3160,8 @@ public class TalkBackService extends AccessibilityService
   /** Reloads preferences whenever their values change. */
   private final OnSharedPreferenceChangeListener sharedPreferenceChangeListener =
       (prefs, key) -> {
-        LogUtils.d(TAG, "A shared preference changed: %s", key);
+    //noti:
+        LoggerUtil.i(System.currentTimeMillis(),DOMAIN , PreferenceLogger.Log(prefs,key));
         if (getString(R.string.pref_previous_global_window_animation_scale_key).equals(key)) {
           // The stored animation factor is no related to TalkBack Settings at all. We skip to
           // reloadPreferences to avoid the additional of Talkback re-configuration.

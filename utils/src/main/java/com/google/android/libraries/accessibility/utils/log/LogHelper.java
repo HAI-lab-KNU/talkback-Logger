@@ -6,12 +6,18 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+
 import com.j256.ormlite.android.apptools.OpenHelperManager;
 import com.j256.ormlite.android.apptools.OrmLiteSqliteOpenHelper;
 import com.j256.ormlite.dao.Dao;
 import com.j256.ormlite.support.ConnectionSource;
 import com.j256.ormlite.table.TableUtils;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -35,7 +41,7 @@ public class LogHelper  extends OrmLiteSqliteOpenHelper {
 
     private static long lastBackupTimestamp = System.currentTimeMillis();
     // 1시간(3600000 밀리초)마다 백업
-    private static final long BACKUP_INTERVAL = 3600000;
+    private static final long BACKUP_INTERVAL = 3600000; //3600000 = 1시간
     private static Handler backupHandler;
     private static Runnable backupTask;
     private static SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy년 MM월 dd일 HH시 mm분 ss초", Locale.getDefault());
@@ -132,14 +138,21 @@ public class LogHelper  extends OrmLiteSqliteOpenHelper {
     private static void BackupToFile(List<LoggerUtil.LogEntry> logs, String backupFileName, Dao<LoggerUtil.LogEntry, Long> logEntryDao) {
         // 백업 파일에 로그를 저장하는 로직 구현
         // 백업 파일을 생성하고, logs 리스트를 파일에 저장
-        //todo : LogEntry 형식으로 저장.
         executorService.submit(()->{
-            try {
+            File backupDir = instance.getExternalFilesDir(null); // 백업 디렉토리 설정
+            if (backupDir != null && !backupDir.exists()) {
+                backupDir.mkdirs();  // 디렉토리가 존재하지 않으면 생성
+            }
+
+            File backupFile = new File(backupDir, backupFileName);
+            try (FileWriter writer = new FileWriter(backupFile)) {
                 for (LoggerUtil.LogEntry log : logs) {
-                    logEntryDao.create(log);
+                    // 로그를 파일에 저장 (예: JSON 형식 또는 간단한 문자열)
+                    writer.write(log.toString() + "\n");
                 }
-                Log.i(TAG, "Backup completed: " + backupFileName);
-            } catch (Exception e) {
+                writer.flush();
+                Log.i(TAG, "Backup completed: " + backupFile.getAbsolutePath());
+            } catch (IOException e) {
                 e.printStackTrace();
                 Log.e(TAG, "Failed to create backup file: " + e.getMessage());
             }

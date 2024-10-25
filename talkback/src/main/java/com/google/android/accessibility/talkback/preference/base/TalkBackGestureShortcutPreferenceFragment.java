@@ -34,7 +34,6 @@ import androidx.preference.PreferenceGroup;
 import com.google.android.accessibility.talkback.R;
 import com.google.android.accessibility.talkback.gesture.GestureShortcutMapping;
 import com.google.android.accessibility.talkback.preference.PreferencesActivityUtils;
-import com.google.android.accessibility.talkback.preference.PrefrenceLogger;
 import com.google.android.accessibility.talkback.training.TutorialInitiator;
 import com.google.android.accessibility.utils.FeatureSupport;
 import com.google.android.accessibility.utils.FormFactorUtils;
@@ -42,7 +41,6 @@ import com.google.android.accessibility.utils.SharedPreferencesUtils;
 import com.google.android.accessibility.utils.material.A11yAlertDialogWrapper;
 import com.google.android.accessibility.utils.preference.AccessibilitySuitePreferenceCategory;
 import com.google.android.libraries.accessibility.utils.log.LogUtils;
-import com.google.android.libraries.accessibility.utils.log.LoggerUtil;
 
 import java.util.Map;
 
@@ -229,8 +227,6 @@ public class TalkBackGestureShortcutPreferenceFragment extends TalkbackBaseFragm
                 TAG, "Fragment is not attached to activity, do not update verbosity setting page.");
             return;
           }
-          //noti: 로깅: 변경된 키와 새로운 값을 출력
-          LoggerUtil.i(System.currentTimeMillis(),LoggerUtil.DOMAIN_TALKBACK_PREFERENCE, PrefrenceLogger.Log(prefs, key));
           if (TextUtils.equals(key, getString(R.string.pref_gesture_set_key))) {
             ListPreference preference =
                 (ListPreference) findPreference(getString(R.string.pref_gesture_set_key));

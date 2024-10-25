@@ -52,6 +52,9 @@
     <!-- Required for posting notifications, beginning in Android T. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+
+
     <!-- Hardware compatibility. -->
     <uses-feature
         android:name="android.hardware.touchscreen"

@@ -30,11 +30,9 @@ import androidx.preference.PreferenceManager;
 import androidx.preference.SwitchPreference;
 import com.google.android.accessibility.talkback.R;
 import com.google.android.accessibility.talkback.preference.PreferencesActivityUtils;
-import com.google.android.accessibility.talkback.preference.PrefrenceLogger;
 import com.google.android.accessibility.talkback.utils.VerbosityPreferences;
 import com.google.android.accessibility.utils.SharedPreferencesUtils;
 import com.google.android.libraries.accessibility.utils.log.LogUtils;
-import com.google.android.libraries.accessibility.utils.log.LoggerUtil;
 import com.google.common.collect.ImmutableMap;
 import java.util.ArrayList;
 import java.util.Map;
@@ -50,7 +48,6 @@ public class VerbosityPrefFragment extends TalkbackBaseFragment {
   private String verbosityValue; // String identifier for selected verbosity.
   private ImmutableMap<String, Boolean> switchPreferenceKeyValueMap;
   private ImmutableMap<String, Integer> listPreferenceKeyValueMap;
-  private PrefrenceLogger prefrenceLogger;
   public VerbosityPrefFragment() {
     super(R.xml.verbosity_preferences);
   }
@@ -273,8 +270,6 @@ public class VerbosityPrefFragment extends TalkbackBaseFragment {
                 TAG, "Fragment is not attached to activity, do not update verbosity setting page.");
             return;
           }
-          //noti: 로깅: 변경된 키와 새로운 값을 출력
-          LoggerUtil.i(System.currentTimeMillis(),LoggerUtil.DOMAIN_TALKBACK_PREFERENCE,PrefrenceLogger.Log(prefs, key));
           // HandleObject newValue = getPreferenceValue(prefs, key);
           // using the selector and the fragment is visible.
           if (TextUtils.equals(key, getString(R.string.pref_verbosity_preset_key))) {

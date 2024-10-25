@@ -2,6 +2,8 @@ package com.google.android.libraries.accessibility.utils.log;
 
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+
 import com.j256.ormlite.field.DatabaseField;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -39,14 +41,13 @@ public class LoggerUtil {
             this.msg = msg;
         }
 
+        @NonNull
         @Override
         public String toString() {
-            return "LogEntry{" +
-                    "timestamp=" + timestamp +
-                    ", level=" + level +
-                    ", domain=" + domain +
-                    ", msg='" + msg + '\'' +
-                    '}';
+            return "timestamp=" + timestamp +
+                    "| level=" + level +
+                    "| domain=" + domain +
+                    "| msg='" + msg;
         }
     }
 
