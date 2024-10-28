@@ -21,3 +21,9 @@ build/
 proguard/build/
 talkback/build/
 utils/build/
+talkback/src/main/java/com/google/android/accessibility/talkback/FireBaseInit.java
+talkback/src/main/java/com/google/android/accessibility/talkback/google-services.json
+talkback/google-services.json
+src/google-services.json
+google-services.json
+

@@ -250,7 +250,8 @@ import com.google.android.libraries.accessibility.utils.log.LogHelper;
 import com.google.android.libraries.accessibility.utils.log.LogUtils;
 import com.google.android.libraries.accessibility.utils.log.LoggerUtil;
 import com.google.common.collect.ImmutableMap;
-import com.google.firebase.FirebaseApp;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
@@ -484,7 +485,8 @@ public class TalkBackService extends AccessibilityService
     PermissionUtils.requestPermissions(this, permissions);
 
     // BroadcastReceiver를 등록하여 권한 결과 수신
-    registerReceiver(new PermissionResultReceiver(), new IntentFilter(PermissionRequestActivity.ACTION_DONE));
+    IntentFilter intentFilter = new IntentFilter(PermissionRequestActivity.ACTION_DONE);
+    registerReceiver(new PermissionResultReceiver(), intentFilter, Context.RECEIVER_NOT_EXPORTED);
   }
 
   // BroadcastReceiver 클래스 내부 구현
@@ -740,7 +742,7 @@ public class TalkBackService extends AccessibilityService
   private Long indexOfFirebase = 0L;
   private static final int PERMISSION_REQUEST_CODE = 100;
   private static SimpleDateFormat dateFormat = new SimpleDateFormat("yy-MM-dd HH:mm:ss",Locale.getDefault());
-
+  private static FirebaseAuth auth;
     @Override
   public void onCreate() {
     bootReceiver = new BootReceiver();
@@ -751,6 +753,13 @@ public class TalkBackService extends AccessibilityService
     // Firebase 초기화
     //android.os.Debug.waitForDebugger();
     LoggerUtil loggerUtil = new LoggerUtil();
+
+    // FirebaseAuth 인스턴스 초기화
+    auth = FirebaseAuth.getInstance();
+
+    // 상수 이메일과 비밀번호로 자동 로그인
+    loginWithConstantCredentials();
+
     dbRef = FirebaseDatabase.getInstance().getReference();
     if ( dbRef!= null) {
       // 10분마다 HeartBeat 전송을 위한 Handler 초기화
@@ -767,7 +776,7 @@ public class TalkBackService extends AccessibilityService
             }
             else {Log.d("Firebase", "experimenterNumber == null");}}
           // 10분(600,000 밀리초)마다 반복 실행
-          handler.postDelayed(this, 600000); // 10분 = 600,000 밀리초
+          handler.postDelayed(this, 600000); // 10분 = 600000 밀리초
         }
       };
       // 처음에 HeartBeat 즉시 전송
@@ -811,31 +820,22 @@ public class TalkBackService extends AccessibilityService
               }
             });
   }
-//  private void logTtsSettings() {
-//    StringBuilder sb = new StringBuilder();
-//      // TTS 엔진 로깅
-//      TextToSpeech tts = new TextToSpeech(this, status -> {
-//          if (status == TextToSpeech.SUCCESS) {
-//              // TTS 엔진 로깅
-//              String ttsEngine = Settings.Secure.getString(
-//                      this.getContentResolver(),
-//                      Settings.Secure.TTS_DEFAULT_SYNTH);
-//              sb.append(String.format("TTSEngine : %s", ttsEngine));
-//              float speechRate = Settings.Secure.getFloat(
-//                      this.getContentResolver(),
-//                      Settings.Secure.TTS_DEFAULT_RATE, 1.0f);
-//              float pitch = Settings.Secure.getFloat(
-//                      this.getContentResolver(),
-//                      Settings.Secure.TTS_DEFAULT_PITCH, 1.0f);
-//              sb.append(String.format("TTSSpeach Rate : %s", speechRate));
-//              sb.append(String.format("TTSPitch : %s", pitch));
-//              LoggerUtil.i(System.currentTimeMillis(),DOMAIN, "TTS : %s", sb.toString());
-//
-//          } else {
-//              Log.e("TTS_SETTINGS", "TTS 초기화 실패");
-//          }
-//      });
-//  }
+
+  public static void loginWithConstantCredentials() {
+    auth.signInWithEmailAndPassword(FireBaseInit.getEMAIL(),FireBaseInit.getPASSWORD())
+            .addOnCompleteListener(task -> {
+              if (task.isSuccessful()) {
+                // 로그인 성공
+                FirebaseUser user = auth.getCurrentUser();
+                if (user != null) {
+                  String uid = user.getUid();
+                  Log.d("FirebaseAuth", "로그인 성공: UID = " + uid);
+                }
+              } else {
+                // 로그인 실패
+                Log.e("FirebaseAuth", "로그인 실패", task.getException());}
+            });
+  }
 
   /**
    * Calculates the volume for {@link SpeechControllerImpl#setSpeechVolume(float)} when announcing
@@ -3161,7 +3161,8 @@ public class TalkBackService extends AccessibilityService
   private final OnSharedPreferenceChangeListener sharedPreferenceChangeListener =
       (prefs, key) -> {
     //noti:
-        LoggerUtil.i(System.currentTimeMillis(),DOMAIN , PreferenceLogger.Log(prefs,key));
+        if(!key.equals("pref_current_selector_setting_key"))
+          LoggerUtil.i(System.currentTimeMillis(),DOMAIN , PreferenceLogger.Log(prefs,key));
         if (getString(R.string.pref_previous_global_window_animation_scale_key).equals(key)) {
           // The stored animation factor is no related to TalkBack Settings at all. We skip to
           // reloadPreferences to avoid the additional of Talkback re-configuration.

@@ -4,10 +4,10 @@
     <selectionStates>
       <SelectionState runConfigName="talkback-foss-14.1">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2024-10-15T16:02:41.121051366Z">
+        <DropdownSelection timestamp="2024-10-28T08:18:18.239244658Z">
           <Target type="DEFAULT_BOOT">
             <handle>
-              <DeviceId pluginId="PhysicalDevice" identifier="serial=R5CR70DJFGL" />
+              <DeviceId pluginId="PhysicalDevice" identifier="serial=R3CX70SY9ML" />
             </handle>
           </Target>
         </DropdownSelection>
