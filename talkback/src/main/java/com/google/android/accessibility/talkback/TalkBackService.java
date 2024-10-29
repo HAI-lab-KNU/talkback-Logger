@@ -274,6 +274,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /** An {@link AccessibilityService} that provides spoken, haptic, and audible feedback. */
@@ -743,6 +744,9 @@ public class TalkBackService extends AccessibilityService
   private static final int PERMISSION_REQUEST_CODE = 100;
   private static SimpleDateFormat dateFormat = new SimpleDateFormat("yy-MM-dd HH:mm:ss",Locale.getDefault());
   private static FirebaseAuth auth;
+  private final ExecutorService executorService = Executors.newSingleThreadExecutor();
+
+
     @Override
   public void onCreate() {
     bootReceiver = new BootReceiver();
@@ -989,6 +993,7 @@ public class TalkBackService extends AccessibilityService
           .putBoolean(getString(R.string.pref_talkback_gesture_detection_key), false)
           .apply();
     }
+    executorService.shutdown();
     LoggerUtil.shutdownExecutor();
     LogHelper.stopBackupTask();
   }
@@ -1076,8 +1081,11 @@ public class TalkBackService extends AccessibilityService
       // 루트 노드 가져오기
       AccessibilityNodeInfo rootNode = getRootInActiveWindow();
       if (rootNode != null) {
-        List<AccessibilityNodeInfo> nodeInfos = getAllNodes(rootNode);
-        sb.append(String.format("ChildrenNodes : %s; ",nodeInfos.toString()));
+        executorService.execute(() -> {
+          long currentTime = System.currentTimeMillis();
+          List<AccessibilityNodeInfo> nodeInfos = getAllNodes(rootNode);
+          LoggerUtil.i(currentTime,DOMAIN,"ChildrenNodes : %s; ", nodeInfos.toString());
+        });
       } else {
         sb.append(String.format("No Child Nodes"));
       }
