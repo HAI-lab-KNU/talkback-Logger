@@ -114,49 +114,50 @@ public class LogHelper  extends OrmLiteSqliteOpenHelper {
     }
 
     public static void backupDatabase() {
+        executorService.submit(()->{
         LogHelper logHelper = OpenHelperManager.getHelper(instance, LogHelper.class);
-        try {
-            Dao<LoggerUtil.LogEntry, Long> logEntryDao = logHelper.getLogEntryDao();
+            try {
+                Dao<LoggerUtil.LogEntry, Long> logEntryDao = logHelper.getLogEntryDao();
 
-            // 마지막 백업 시점 이후에 저장된 로그만 가져옴
-            List<LoggerUtil.LogEntry> newLogs = logEntryDao.queryBuilder()
-                    .where().ge("timestamp", lastBackupTimestamp)  // 마지막 백업 이후의 로그만
-                    .query();
+                // 마지막 백업 시점 이후에 저장된 로그만 가져옴
+                List<LoggerUtil.LogEntry> newLogs = logEntryDao.queryBuilder()
+                        .where().ge("timestamp", lastBackupTimestamp)  // 마지막 백업 이후의 로그만
+                        .query();
 
-            // 새 백업 파일에 새로운 로그 저장 (백업 파일명: log_backup_<현재 시간>.db)
-            String backupFileName = "log_backup_" + dateFormat.format(new Date(System.currentTimeMillis())) + ".db";
-            BackupToFile(newLogs, backupFileName,logEntryDao);
+                // 새 백업 파일에 새로운 로그 저장 (백업 파일명: log_backup_<현재 시간>.db)
+                String backupFileName = "log_backup_" + dateFormat.format(new Date(System.currentTimeMillis())) + ".db";
+                BackupToFile(newLogs, backupFileName,logEntryDao);
 
-            // 마지막 백업 시점을 업데이트
-            lastBackupTimestamp = System.currentTimeMillis();
+                // 마지막 백업 시점을 업데이트
+                lastBackupTimestamp = System.currentTimeMillis();
 
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        });
     }
 
     private static void BackupToFile(List<LoggerUtil.LogEntry> logs, String backupFileName, Dao<LoggerUtil.LogEntry, Long> logEntryDao) {
         // 백업 파일에 로그를 저장하는 로직 구현
         // 백업 파일을 생성하고, logs 리스트를 파일에 저장
-        executorService.submit(()->{
-            File backupDir = instance.getExternalFilesDir(null); // 백업 디렉토리 설정
-            if (backupDir != null && !backupDir.exists()) {
-                backupDir.mkdirs();  // 디렉토리가 존재하지 않으면 생성
-            }
 
-            File backupFile = new File(backupDir, backupFileName);
-            try (FileWriter writer = new FileWriter(backupFile)) {
-                for (LoggerUtil.LogEntry log : logs) {
-                    // 로그를 파일에 저장 (예: JSON 형식 또는 간단한 문자열)
-                    writer.write(log.toString() + "\n");
-                }
-                writer.flush();
-                Log.i(TAG, "Backup completed: " + backupFile.getAbsolutePath());
-            } catch (IOException e) {
-                e.printStackTrace();
-                Log.e(TAG, "Failed to create backup file: " + e.getMessage());
+        File backupDir = instance.getExternalFilesDir(null); // 백업 디렉토리 설정
+        if (backupDir != null && !backupDir.exists()) {
+            backupDir.mkdirs();  // 디렉토리가 존재하지 않으면 생성
+        }
+
+        File backupFile = new File(backupDir, backupFileName);
+        try (FileWriter writer = new FileWriter(backupFile)) {
+            for (LoggerUtil.LogEntry log : logs) {
+                // 로그를 파일에 저장 (예: JSON 형식 또는 간단한 문자열)
+                writer.write(log.toString() + "\n");
             }
-        });
+            writer.flush();
+            Log.i(TAG, "Backup completed: " + backupFile.getAbsolutePath());
+        } catch (IOException e) {
+            e.printStackTrace();
+            Log.e(TAG, "Failed to create backup file: " + e.getMessage());
+        }
     }
     // 백업 작업을 시작하는 메서드
     public static void startBackupTask() {

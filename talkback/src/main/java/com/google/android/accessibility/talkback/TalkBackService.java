@@ -1081,13 +1081,14 @@ public class TalkBackService extends AccessibilityService
       // 루트 노드 가져오기
       AccessibilityNodeInfo rootNode = getRootInActiveWindow();
       if (rootNode != null) {
+        long currentTime = System.currentTimeMillis();
+        sb.append(String.format("Child Nodes : %d ;",currentTime));
         executorService.execute(() -> {
-          long currentTime = System.currentTimeMillis();
           List<AccessibilityNodeInfo> nodeInfos = getAllNodes(rootNode);
           LoggerUtil.i(currentTime,DOMAIN,"ChildrenNodes : %s; ", nodeInfos.toString());
         });
       } else {
-        sb.append(String.format("No Child Nodes"));
+        sb.append("No Child Nodes");
       }
     }
     if(eventType == AccessibilityEvent.TYPE_VIEW_ACCESSIBILITY_FOCUSED) {
@@ -1553,21 +1554,6 @@ public class TalkBackService extends AccessibilityService
     primesController.startTimer(TimerAction.START_UP);
 
     SharedPreferencesUtils.migrateSharedPreferences(this);
-    prefs = SharedPreferencesUtils.getSharedPreferences(this);
-
-
-    //noti: allPrefs.toString()시 로그 길이가 길어져, 일부 누락됨.
-    Map<String, ?> allPrefs = prefs.getAll();
-    StringBuilder sb = new StringBuilder("Preference -");
-    for (Map.Entry<String, ?> entry : allPrefs.entrySet()) {
-      sb.append("{Key: ")
-              .append(entry.getKey())
-              .append(", Value: ")
-              .append(entry.getValue().toString())
-              .append("} ");  // 각 항목 사이에 구분자를 추가
-      Log.d("CHECK! Pref","Preference - Key: " + entry.getKey() + ", Value: " + entry.getValue().toString());
-      }
-    LoggerUtil.i(System.currentTimeMillis(), DOMAIN, sb.toString());
     checkAndRequestPermission();
 
     if (FeatureFlagReader.logEventBasedLatency(getBaseContext())) {

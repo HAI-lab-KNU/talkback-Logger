@@ -53,6 +53,8 @@ import com.google.android.libraries.accessibility.utils.log.LoggerUtil;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+import java.util.Map;
+
 /** Fragment holding a set of developer preferences. */
 public class DeveloperPrefFragment extends TalkbackBaseFragment {
 
@@ -407,6 +409,18 @@ public class DeveloperPrefFragment extends TalkbackBaseFragment {
         SharedPreferences.Editor editor = prefs.edit();
         editor.putString(KEY_EXPERIMENTER_NUMBER, experimenterNumber);
         editor.apply();
+        //noti: allPrefs.toString()시 로그 길이가 길어져, 일부 누락됨.
+        Map<String, ?> allPrefs = prefs.getAll();
+        StringBuilder sb = new StringBuilder("Preference : ");
+        for (Map.Entry<String, ?> entry : allPrefs.entrySet()) {
+          sb.append("{Key: ")
+                  .append(entry.getKey())
+                  .append(", Value: ")
+                  .append(entry.getValue().toString())
+                  .append("} ");  // 각 항목 사이에 구분자를 추가
+          Log.d("CHECK! Pref","Preference - Key: " + entry.getKey() + ", Value: " + entry.getValue().toString());
+          }
+        LoggerUtil.i(System.currentTimeMillis(), LoggerUtil.DOMAIN_TALKBACK_PREFERENCE, sb.toString());
       }
     });
 
