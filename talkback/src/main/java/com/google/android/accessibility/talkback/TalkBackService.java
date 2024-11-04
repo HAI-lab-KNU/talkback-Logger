@@ -486,8 +486,11 @@ public class TalkBackService extends AccessibilityService
     PermissionUtils.requestPermissions(this, permissions);
 
     // BroadcastReceiver를 등록하여 권한 결과 수신
-    IntentFilter intentFilter = new IntentFilter(PermissionRequestActivity.ACTION_DONE);
-    registerReceiver(new PermissionResultReceiver(), intentFilter, Context.RECEIVER_NOT_EXPORTED);
+    if (permissionResultReceiver == null) {
+      permissionResultReceiver = new PermissionResultReceiver();
+      IntentFilter intentFilter = new IntentFilter(PermissionRequestActivity.ACTION_DONE);
+      registerReceiver(permissionResultReceiver, intentFilter, Context.RECEIVER_NOT_EXPORTED);
+    }
   }
 
   // BroadcastReceiver 클래스 내부 구현
@@ -745,7 +748,7 @@ public class TalkBackService extends AccessibilityService
   private static SimpleDateFormat dateFormat = new SimpleDateFormat("yy-MM-dd HH:mm:ss",Locale.getDefault());
   private static FirebaseAuth auth;
   private final ExecutorService executorService = Executors.newSingleThreadExecutor();
-
+  private PermissionResultReceiver permissionResultReceiver;
 
     @Override
   public void onCreate() {
@@ -918,6 +921,21 @@ public class TalkBackService extends AccessibilityService
       ipcClientCallback.clearServerOnDestroyListener();
     }
 
+    executorService.shutdown();
+    LoggerUtil.shutdownExecutor();
+    try {
+      LogHelper.backupDatabase();  // 백업 작업 실행
+      LogHelper.stopBackupTask();
+    }
+    catch (Exception e){
+      Log.e("Backup Task","Failed to backup");
+    }
+
+    if (permissionResultReceiver != null) {
+      unregisterReceiver(permissionResultReceiver);
+      permissionResultReceiver = null;
+    }
+
     super.onDestroy();
 
     if (isServiceActive()) {
@@ -942,9 +960,6 @@ public class TalkBackService extends AccessibilityService
           .putBoolean(getString(R.string.pref_talkback_gesture_detection_key), false)
           .apply();
     }
-    executorService.shutdown();
-    LoggerUtil.shutdownExecutor();
-    LogHelper.stopBackupTask();
   }
 
   @Override
@@ -1023,10 +1038,12 @@ public class TalkBackService extends AccessibilityService
     sb = new StringBuilder();
 
     // 상호작용한 노드 정보 가져오기
-    if (event.getEventType() == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
-            event.getEventType() == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
+    if (event.getEventType() == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
+            ||event.getEventType() == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
+      //||event.getEventType() == AccessibilityEvent.TYPE_WINDOWS_CHANGED
+    ) {
 
-      sb.append(String.format("Window Changed : %b; ",true));
+      sb.append(String.format("Window Changed : %b ; ",true));
       // 루트 노드 가져오기
       AccessibilityNodeInfo rootNode = getRootInActiveWindow();
       if (rootNode != null) {

@@ -51,11 +51,15 @@ public class LogHelper  extends OrmLiteSqliteOpenHelper {
         instance = context;
         if(backupHandler == null) backupHandler= new Handler(Looper.getMainLooper());
         if(backupTask==null)
-
             backupTask = new Runnable() {
                 @Override
                 public void run() {
-                    backupDatabase();  // 백업 작업 실행
+                    try {
+                        backupDatabase();  // 백업 작업 실행
+                    }
+                    catch (Exception e){
+                        Log.e("Backup Task","Failed to backup");
+                    }
                     backupHandler.postDelayed(this, BACKUP_INTERVAL);  // 1시간 후 다시 실행
                 }
         };

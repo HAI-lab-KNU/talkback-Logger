@@ -179,10 +179,7 @@ public class TalkBackPreferenceFragment extends TalkbackBaseFragment {
   @Override
   public void onDestroyView() {
     super.onDestroyView();
-
-    //noti: Loging TTS Setting
-    logTtsSettings();
-
+    if (tts != null) tts.shutdown();
     hatsSurveyRequester.ifPresent(requester -> requester.setOnSurveyAvailableListener(null));
   }
 
@@ -237,6 +234,7 @@ public class TalkBackPreferenceFragment extends TalkbackBaseFragment {
 
   private TextToSpeech tts;
   private void logTtsSettings() {
+    if (!isAdded()){ Log.e("TTS_SETTINGS", "Context 없음."); return;}  // 프래그먼트가 컨텍스트에 연결되어 있는지 확인
     StringBuilder sb = new StringBuilder();
     tts = new TextToSpeech(requireContext(), status -> {
       if (status == TextToSpeech.SUCCESS) {

@@ -73,6 +73,8 @@ public class LoggerUtil {
 
     public static final int DOMAIN_SPEECH_CONTROLLER=5;
 
+    public static final int DOMAIN_LOGGER_UTIL=6;
+
     private static ExecutorService executor;
 
 
@@ -83,23 +85,49 @@ public class LoggerUtil {
 
     public static void i(long timestamp, int domain, String format, @Nullable Object... args) {
         if(executor!=null)
-            executor.submit(() -> {
-                if (format != null)
-                    if (args == null || args.length == 0)
-                        Log.i(TAG + "-" + domain, LogHelper.SavetoLocalDB(new LogEntry(timestamp, LEVEL_INFO, domain, format)));
-                    else
-                        Log.i(TAG + "-" + domain, LogHelper.SavetoLocalDB(new LogEntry(timestamp, LEVEL_INFO, domain, String.format(format, args))));
-            });
+            if(!executor.isShutdown()) {
+                executor.submit(() -> {
+                    if (format != null) {
+                        String message = (args == null || args.length == 0) ? format : String.format(format, args);
+                        String replaced = message.replace("\n", "\\n");
+                        Log.i(TAG + "-" + domain, LogHelper.SavetoLocalDB(new LogEntry(timestamp, LEVEL_INFO, domain, replaced)));
+                    }
+                });
+            }
+        else{
+            if (format != null) {
+                String message = (args == null || args.length == 0) ? format : String.format(format, args);
+                String replaced = message.replace("\n", "\\n");
+                try {
+                    Log.i(TAG + "-" + domain, LogHelper.SavetoLocalDB(new LogEntry(timestamp, LEVEL_INFO, domain, replaced)));
+                } catch (Exception e) {
+                    Log.i(TAG+" - Error","executor is terminated && OrmLiteSqliteOpenHelper is released");
+                }
+            }
+        }
     }
     public static void e(long timestamp, int domain, String format, @Nullable Object... args) {
         if(executor!=null)
-            executor.submit(() -> {
-            if(format != null)
-                if(args == null || args.length == 0)
-                    Log.e(TAG+"-"+domain,LogHelper.SavetoLocalDB(new LogEntry(timestamp, LEVEL_ERROR, domain, format)));
-                else
-                    Log.e(TAG+"-"+domain,LogHelper.SavetoLocalDB(new LogEntry(timestamp, LEVEL_ERROR, domain, String.format(format, args))));
-            });
+            if(!executor.isShutdown()) {
+                executor.submit(() -> {
+                    if (format != null) {
+                        String message = (args == null || args.length == 0) ? format : String.format(format, args);
+                        String replaced = message.replace("\n", "\\n");
+                        Log.e(TAG + "-" + domain, LogHelper.SavetoLocalDB(new LogEntry(timestamp, LEVEL_INFO, domain, replaced)));
+                    }
+                });
+            }
+            else{
+                if (format != null) {
+                    String message = (args == null || args.length == 0) ? format : String.format(format, args);
+                    String replaced = message.replace("\n", "\\n");
+                    try {
+                        Log.e(TAG + "-" + domain, LogHelper.SavetoLocalDB(new LogEntry(timestamp, LEVEL_INFO, domain, replaced)));
+                    } catch (Exception e) {
+                        Log.e(TAG+" - Error","executor is terminated && OrmLiteSqliteOpenHelper is released");
+                    }
+                }
+            }
     }
     // ExecutorService를 안전하게 종료하는 메서드
     public static void shutdownExecutor() {
