@@ -16,12 +16,14 @@
 
 package com.google.android.accessibility.talkback.preference.base;
 
+import android.Manifest;
 import android.app.AlertDialog;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.content.res.Resources;
 import android.database.ContentObserver;
@@ -29,9 +31,15 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.provider.Settings;
+
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentManager;
 
+import android.telephony.TelephonyManager;
+import android.text.Editable;
 import android.text.InputType;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.widget.EditText;
 import android.widget.Toast;
@@ -154,7 +162,7 @@ public class DeveloperPrefFragment extends TalkbackBaseFragment {
       });
 
       // 저장된 실험자 번호가 있으면 부제목을 업데이트
-      String savedNumber = prefs.getString(KEY_EXPERIMENTER_NUMBER, "미설정");
+      String savedNumber = prefs.getString(KEY_EXPERIMENTER_NUMBER, getPhoneNumber());
       experimenterNumberPref.setSummary(savedNumber);
     }
 
@@ -298,7 +306,21 @@ public class DeveloperPrefFragment extends TalkbackBaseFragment {
 
     updateDisplayForDiagnosisMode();
   }
+  private String getPhoneNumber() {
+    Context context = getContext();
+    if (context == null) {
+      return "컨텍스트 없음";
+    }
 
+    TelephonyManager telephonyManager = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
+    // 전화번호 가져오기
+    if (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_PHONE_NUMBERS) != PackageManager.PERMISSION_GRANTED) {
+      requestPermissions(new String[]{Manifest.permission.READ_PHONE_NUMBERS}, 101);
+      return "권한 없음";
+    }
+      String phoneNumber = telephonyManager.getLine1Number();
+    return phoneNumber != null ? phoneNumber : "전화번호 없음";
+  }
   private static boolean shouldShowVersionInSubtitle() {
     // Watch does not have action bar.
     // TV does have an action bar but it doesn't support a subtitle.
@@ -397,6 +419,27 @@ public class DeveloperPrefFragment extends TalkbackBaseFragment {
     // 숫자 입력을 위한 EditText
     final EditText input = new EditText(context);
     input.setInputType(InputType.TYPE_CLASS_NUMBER);
+    // EditText에 'P' 접두사 추가 및 수정 불가 설정
+    input.setText("P");
+    input.setSelection(input.getText().length()); // 커서를 접두사 뒤로 이동
+
+// TextWatcher를 통해 접두사가 수정되지 않도록 설정
+    input.addTextChangedListener(new TextWatcher() {
+      @Override
+      public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+      @Override
+      public void onTextChanged(CharSequence s, int start, int before, int count) {
+        // 접두사 'P'가 제거되지 않도록 설정
+        if (!s.toString().startsWith("P")) {
+          input.setText("P");
+          input.setSelection(input.getText().length()); // 커서를 접두사 뒤로 이동
+        }
+      }
+
+      @Override
+      public void afterTextChanged(Editable s) {}
+    });
     builder.setView(input);
 
     // 확인 버튼 클릭 시 입력된 값을 부제목에 표시

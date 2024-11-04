@@ -753,42 +753,6 @@ public class TalkBackService extends AccessibilityService
     ContextCompat.registerReceiver(this, bootReceiver, BootReceiver.getFilter(), RECEIVER_EXPORTED);
     super.onCreate();
 
-    //noti
-    // Firebase 초기화
-    //android.os.Debug.waitForDebugger();
-    LoggerUtil loggerUtil = new LoggerUtil();
-
-    // FirebaseAuth 인스턴스 초기화
-    auth = FirebaseAuth.getInstance();
-
-    // 상수 이메일과 비밀번호로 자동 로그인
-    loginWithConstantCredentials();
-
-    dbRef = FirebaseDatabase.getInstance().getReference();
-    if ( dbRef!= null) {
-      // 10분마다 HeartBeat 전송을 위한 Handler 초기화
-      handler = new Handler(Looper.getMainLooper());
-      // HeartBeat 전송 작업 정의
-      heartBeatTask = new Runnable() {
-        @Override
-        public void run() {
-          if(prefs!=null){
-            experimenterNumber = prefs.getString("pref_experimenter_number","not yet");
-            if(!experimenterNumber.equals("not yet")) {
-              Log.d("Firebase", "Running Runnable() --> run()");
-              sendHeartBeat();
-            }
-            else {Log.d("Firebase", "experimenterNumber == null");}}
-          // 10분(600,000 밀리초)마다 반복 실행
-          handler.postDelayed(this, 600000); // 10분 = 600000 밀리초
-        }
-      };
-      // 처음에 HeartBeat 즉시 전송
-      handler.post(heartBeatTask);
-    } else {
-      Log.e("Firebase", "Firebase initialization failed.");
-    }
-    //logTtsSettings();
 
     this.setTheme(R.style.TalkbackBaseTheme);
     instance = this;
@@ -825,21 +789,6 @@ public class TalkBackService extends AccessibilityService
             });
   }
 
-  public static void loginWithConstantCredentials() {
-    auth.signInWithEmailAndPassword(FireBaseInit.getEMAIL(),FireBaseInit.getPASSWORD())
-            .addOnCompleteListener(task -> {
-              if (task.isSuccessful()) {
-                // 로그인 성공
-                FirebaseUser user = auth.getCurrentUser();
-                if (user != null) {
-                  String uid = user.getUid();
-                  Log.d("FirebaseAuth", "로그인 성공: UID = " + uid);
-                }
-              } else {
-                // 로그인 실패
-                Log.e("FirebaseAuth", "로그인 실패", task.getException());}
-            });
-  }
 
   /**
    * Calculates the volume for {@link SpeechControllerImpl#setSpeechVolume(float)} when announcing
@@ -1554,6 +1503,7 @@ public class TalkBackService extends AccessibilityService
     primesController.startTimer(TimerAction.START_UP);
 
     SharedPreferencesUtils.migrateSharedPreferences(this);
+    prefs = SharedPreferencesUtils.getSharedPreferences(this);
     checkAndRequestPermission();
 
     if (FeatureFlagReader.logEventBasedLatency(getBaseContext())) {
@@ -1638,6 +1588,39 @@ public class TalkBackService extends AccessibilityService
     }
 
     primesController.stopTimer(TimerAction.START_UP);
+
+    //noti
+    // Firebase 초기화
+    //android.os.Debug.waitForDebugger();
+    LoggerUtil loggerUtil = new LoggerUtil();
+
+    // FirebaseAuth 인스턴스 초기화
+    auth = FirebaseAuth.getInstance();
+
+    dbRef = FirebaseDatabase.getInstance().getReference();
+    if ( dbRef!= null) {
+      // 10분마다 HeartBeat 전송을 위한 Handler 초기화
+      handler = new Handler(Looper.getMainLooper());
+      // HeartBeat 전송 작업 정의
+      heartBeatTask = new Runnable() {
+        @Override
+        public void run() {
+          if(prefs!=null){
+            experimenterNumber = prefs.getString("pref_experimenter_number","not yet");
+            if(!experimenterNumber.equals("not yet")) {
+              Log.d("Firebase", "Running Runnable() --> run()");
+              sendHeartBeat();
+            }
+            else {Log.d("Firebase", "experimenterNumber == null");}}
+          // 10분(600,000 밀리초)마다 반복 실행
+          handler.postDelayed(this, 600000); // 10분 = 600000 밀리초
+        }
+      };
+      // 처음에 HeartBeat 즉시 전송
+      handler.post(heartBeatTask);
+    } else {
+      Log.e("Firebase", "Firebase initialization failed.");
+    }
   }
 
   /**
