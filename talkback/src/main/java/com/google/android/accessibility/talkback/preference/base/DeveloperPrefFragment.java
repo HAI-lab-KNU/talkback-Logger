@@ -454,14 +454,13 @@ public class DeveloperPrefFragment extends TalkbackBaseFragment {
         editor.apply();
         //noti: allPrefs.toString()시 로그 길이가 길어져, 일부 누락됨.
         Map<String, ?> allPrefs = prefs.getAll();
-        StringBuilder sb = new StringBuilder("Preference : ");
+        StringBuilder sb = new StringBuilder(String.format("%d : ",LoggerUtil.EVENT_PREFERENCE));
         for (Map.Entry<String, ?> entry : allPrefs.entrySet()) {
-          sb.append("{Key: ")
+          sb.append("{K: ") //Key
                   .append(entry.getKey())
-                  .append(", Value: ")
+                  .append(", V: ") //Value
                   .append(entry.getValue().toString())
-                  .append("} ");  // 각 항목 사이에 구분자를 추가
-          Log.d("CHECK! Pref","Preference - Key: " + entry.getKey() + ", Value: " + entry.getValue().toString());
+                  .append("} ");
           }
         LoggerUtil.i(System.currentTimeMillis(), LoggerUtil.DOMAIN_TALKBACK_PREFERENCE, sb.toString());
       }

@@ -18,6 +18,7 @@ package com.google.android.accessibility.talkback;
 
 import static android.content.Context.RECEIVER_EXPORTED;
 import static com.google.android.accessibility.utils.Performance.EVENT_ID_UNTRACKED;
+import static com.google.android.libraries.accessibility.utils.log.LoggerUtil.EVENT_IS_SCREEN_ON;
 
 import android.app.Service;
 import android.content.BroadcastReceiver;
@@ -219,14 +220,14 @@ public class RingerModeAndScreenMonitor extends BroadcastReceiver
       case Intent.ACTION_SCREEN_ON:
         isInteractive = true;
         //noti: Log here
-        LoggerUtil.i(System.currentTimeMillis(),LoggerUtil.DOMAIN_RINGER_MODE_AND_SCREEN_MONITOR,"IsScreenOn : %b",true);
+        LoggerUtil.i(System.currentTimeMillis(),LoggerUtil.DOMAIN_RINGER_MODE_AND_SCREEN_MONITOR,"%s : 1",EVENT_IS_SCREEN_ON);
 
         handleScreenOn(eventId);
         break;
       case Intent.ACTION_SCREEN_OFF:
         isInteractive = false;
         //noti: Log here
-        LoggerUtil.i(System.currentTimeMillis(),LoggerUtil.DOMAIN_RINGER_MODE_AND_SCREEN_MONITOR,"IsScreenOn : %b",false);
+        LoggerUtil.i(System.currentTimeMillis(),LoggerUtil.DOMAIN_RINGER_MODE_AND_SCREEN_MONITOR,"%s : 0",EVENT_IS_SCREEN_ON);
 
         handleScreenOff(eventId);
         break;

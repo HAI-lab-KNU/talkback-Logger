@@ -73,10 +73,23 @@ public class LoggerUtil {
 
     public static final int DOMAIN_SPEECH_CONTROLLER=5;
 
-    public static final int DOMAIN_LOGGER_UTIL=6;
-
     private static ExecutorService executor;
 
+    public static final int EVENT_IS_SCREEN_ON =0;
+
+    public static final int EVENT_CHILDREN_NODES =1;
+
+    public static final int EVENT_CURRENT_NODE =2;
+
+    public static final int EVENT_EVENT_ID =3;
+
+    public static final int EVENT_PREFERENCE =4;
+
+    public static final int EVENT_TTS_INFORMATION_DEFAULT =5;
+
+    public static final int EVENT_TTS_SPEECH_RATE =6;
+
+    public static final int EVENT_SCROLL_DIRECTION =7;
 
     public LoggerUtil() {
         if(executor == null)
@@ -90,6 +103,7 @@ public class LoggerUtil {
                     if (format != null) {
                         String message = (args == null || args.length == 0) ? format : String.format(format, args);
                         String replaced = message.replace("\n", "\\n");
+                        if (replaced.isEmpty()) return;
                         Log.i(TAG + "-" + domain, LogHelper.SavetoLocalDB(new LogEntry(timestamp, LEVEL_INFO, domain, replaced)));
                     }
                 });
@@ -98,6 +112,7 @@ public class LoggerUtil {
             if (format != null) {
                 String message = (args == null || args.length == 0) ? format : String.format(format, args);
                 String replaced = message.replace("\n", "\\n");
+                if (replaced.isEmpty()) return;
                 try {
                     Log.i(TAG + "-" + domain, LogHelper.SavetoLocalDB(new LogEntry(timestamp, LEVEL_INFO, domain, replaced)));
                 } catch (Exception e) {
@@ -113,7 +128,8 @@ public class LoggerUtil {
                     if (format != null) {
                         String message = (args == null || args.length == 0) ? format : String.format(format, args);
                         String replaced = message.replace("\n", "\\n");
-                        Log.e(TAG + "-" + domain, LogHelper.SavetoLocalDB(new LogEntry(timestamp, LEVEL_INFO, domain, replaced)));
+                        if (replaced.isEmpty()) return;
+                        Log.e(TAG + "-" + domain, LogHelper.SavetoLocalDB(new LogEntry(timestamp, LEVEL_ERROR, domain, replaced)));
                     }
                 });
             }
@@ -121,8 +137,9 @@ public class LoggerUtil {
                 if (format != null) {
                     String message = (args == null || args.length == 0) ? format : String.format(format, args);
                     String replaced = message.replace("\n", "\\n");
+                    if (replaced.isEmpty()) return;
                     try {
-                        Log.e(TAG + "-" + domain, LogHelper.SavetoLocalDB(new LogEntry(timestamp, LEVEL_INFO, domain, replaced)));
+                        Log.e(TAG + "-" + domain, LogHelper.SavetoLocalDB(new LogEntry(timestamp, LEVEL_ERROR, domain, replaced)));
                     } catch (Exception e) {
                         Log.e(TAG+" - Error","executor is terminated && OrmLiteSqliteOpenHelper is released");
                     }

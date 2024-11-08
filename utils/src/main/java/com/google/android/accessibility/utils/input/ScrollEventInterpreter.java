@@ -258,7 +258,7 @@ public class ScrollEventInterpreter implements AccessibilityEventListener {
         notifyListenersWithInterpretation(event, interpretation, eventId);
         //noti: Log Scroll Direction
         if(interpretation.scrollDirection != ScrollEventInterpretation.DEFAULT_INTERPRETATION.scrollDirection){
-          LoggerUtil.i(System.currentTimeMillis(),LoggerUtil.DOMAIN_SCROLL_EVENT_INTERPRETER,"Scroll Direction : %d",interpretation.scrollDirection);
+          LoggerUtil.i(System.currentTimeMillis(),LoggerUtil.DOMAIN_SCROLL_EVENT_INTERPRETER,"%d : %d",LoggerUtil.EVENT_SCROLL_DIRECTION,interpretation.scrollDirection);
         }
         break;
       default:

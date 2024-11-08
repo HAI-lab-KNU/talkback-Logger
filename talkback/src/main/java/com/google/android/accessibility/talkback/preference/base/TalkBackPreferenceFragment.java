@@ -242,16 +242,16 @@ public class TalkBackPreferenceFragment extends TalkbackBaseFragment {
         String ttsEngine = Settings.Secure.getString(
                 requireContext().getContentResolver(),
                 Settings.Secure.TTS_DEFAULT_SYNTH);
-        sb.append(String.format("TTSEngine : %s; ",ttsEngine));
+        sb.append(String.format("E : %s; ",ttsEngine));//TTS_ENGINE
         float speechRate = Settings.Secure.getFloat(
                 requireContext().getContentResolver(),
                 Settings.Secure.TTS_DEFAULT_RATE, 1.0f);
         float pitch = Settings.Secure.getFloat(
                 requireContext().getContentResolver(),
                 Settings.Secure.TTS_DEFAULT_PITCH, 1.0f);
-        sb.append(String.format("TTSSpeach Rate : %s; ",speechRate));
-        sb.append(String.format("TTSPitch : %s; ",pitch));
-        LoggerUtil.i(System.currentTimeMillis(),LoggerUtil.DOMAIN_TALKBACK_PREFERENCE,"TTS : %s",sb.toString());
+        sb.append(String.format("SR: %s; ",speechRate)); //TTS_SPEECH_RATE
+        sb.append(String.format("P : %s",pitch)); //TTS_PITCH
+        LoggerUtil.i(System.currentTimeMillis(),LoggerUtil.DOMAIN_TALKBACK_PREFERENCE,"%d: %s",LoggerUtil.EVENT_TTS_INFORMATION_DEFAULT,sb.toString());
 
       } else {
         Log.e("TTS_SETTINGS", "TTS 초기화 실패");

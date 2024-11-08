@@ -364,7 +364,7 @@ public class SpeechControllerImpl implements SpeechController {
   }
 
   public void setSpeechRate(float speechRate) {
-    LoggerUtil.i(System.currentTimeMillis(),LoggerUtil.DOMAIN_SPEECH_CONTROLLER,"TTS speech Rate in Talkback : %f",speechRate);
+    LoggerUtil.i(System.currentTimeMillis(),LoggerUtil.DOMAIN_SPEECH_CONTROLLER,"%d : %f",LoggerUtil.EVENT_TTS_SPEECH_RATE,speechRate);
     mSpeechRate = speechRate;
   }
 

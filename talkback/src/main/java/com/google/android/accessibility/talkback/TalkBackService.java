@@ -81,11 +81,11 @@ import android.view.Display;
 import android.view.KeyEvent;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
+import android.graphics.Rect;
 
 import androidx.annotation.VisibleForTesting;
 import androidx.core.content.ContextCompat;
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat;
-import androidx.core.app.ActivityCompat;
 
 import com.google.android.accessibility.braille.brailledisplay.BrailleDisplay;
 import com.google.android.accessibility.braille.interfaces.BrailleImeForTalkBack;
@@ -749,6 +749,7 @@ public class TalkBackService extends AccessibilityService
   private static FirebaseAuth auth;
   private final ExecutorService executorService = Executors.newSingleThreadExecutor();
   private PermissionResultReceiver permissionResultReceiver;
+  private final Set<Integer> printedNodes = new HashSet<>();
 
     @Override
   public void onCreate() {
@@ -999,8 +1000,7 @@ public class TalkBackService extends AccessibilityService
   public void onAccessibilityEvent(AccessibilityEvent event) {
 
     //noti:
-    LoggerUtil.i(System.currentTimeMillis(),DOMAIN,event.toString());
-
+    //LoggerUtil.i(System.currentTimeMillis(),DOMAIN,"%s : s%",LoggerUtil.EVENT_ACCESSIBILITY_EVENT,event.toString());
 
     Performance perf = Performance.getInstance();
     EventId eventId = perf.onEventReceived(event);
@@ -1035,40 +1035,87 @@ public class TalkBackService extends AccessibilityService
     if (diagnosticOverlayController != null) {
       diagnosticOverlayController.displayEvent(event);
     }
-    sb = new StringBuilder();
+
 
     // 상호작용한 노드 정보 가져오기
     if (event.getEventType() == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
             ||event.getEventType() == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
-      //||event.getEventType() == AccessibilityEvent.TYPE_WINDOWS_CHANGED
     ) {
-
-      sb.append(String.format("Window Changed : %b ; ",true));
       // 루트 노드 가져오기
       AccessibilityNodeInfo rootNode = getRootInActiveWindow();
+      long currentTime = System.currentTimeMillis();
       if (rootNode != null) {
-        long currentTime = System.currentTimeMillis();
-        sb.append(String.format("Child Nodes : %d ;",currentTime));
+        LoggerUtil.i(currentTime,DOMAIN,"%d : 1; ",LoggerUtil.EVENT_CHILDREN_NODES);
         executorService.execute(() -> {
           List<AccessibilityNodeInfo> nodeInfos = getAllNodes(rootNode);
-          LoggerUtil.i(currentTime,DOMAIN,"ChildrenNodes : %s; ", nodeInfos.toString());
+          LoggerUtil.i(currentTime,DOMAIN,"%d : %s; ",LoggerUtil.EVENT_CHILDREN_NODES, ChildrenNodesStringFormat(nodeInfos));
         });
       } else {
-        sb.append("No Child Nodes");
+        LoggerUtil.e(currentTime,DOMAIN,"%d : 0; ",LoggerUtil.EVENT_CHILDREN_NODES);
       }
     }
     if(eventType == AccessibilityEvent.TYPE_VIEW_ACCESSIBILITY_FOCUSED) {
       AccessibilityNodeInfo nodeInfo = event.getSource();
       if (nodeInfo != null) {
-        sb.append(String.format("Current Node : %s; ",nodeInfo));
+        LoggerUtil.i(System.currentTimeMillis(),DOMAIN,"%d : %s; ",LoggerUtil.EVENT_CURRENT_NODE,nodeInfo);
       } else {
-        sb.append(String.format("CurrentNode is null"));
+        LoggerUtil.e(System.currentTimeMillis(),DOMAIN,"%d : 0; ",LoggerUtil.EVENT_CURRENT_NODE);
       }
     }
-    //noti:
-    LoggerUtil.i(System.currentTimeMillis(),DOMAIN,sb.toString());
   }
 
+  private String ChildrenNodesStringFormat(List<AccessibilityNodeInfo> nodeInfos){
+    // 처음 출력되는 건지 확인.
+    //처음 출력되는 거라면? --> Node의 hashCode, boundsInParent, boundsInScreen, boundsInWindow,  packageName, className, text, stateDescription, contentDescripition, parentNode 출력.
+    //이미 출력된 적이 있다면? --> hashcode, boundsInParent, boundsInScreen, boundsInWindow들만 출력
+    StringBuilder sb = new StringBuilder();
+
+    for (AccessibilityNodeInfo node : nodeInfos) {
+      int nodeHashCode = node.hashCode();
+      Rect boundsInParent = new Rect();
+      node.getBoundsInParent(boundsInParent);
+      Rect boundsInScreen = new Rect();
+      node.getBoundsInScreen(boundsInScreen);
+      Rect boundsInWindow = new Rect();
+      if (VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        node.getBoundsInWindow(boundsInWindow);
+      }
+      String boundsInWindowString = boundsInWindow.isEmpty() ? "null" : boundsInWindow.toString();
+
+      String stateDescription;
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) { // R은 API 30을 의미
+        stateDescription = node.getStateDescription() != null ? node.getStateDescription().toString() : "null";
+      } else {
+        stateDescription = "Not available";
+      }
+
+      if (!printedNodes.contains(nodeHashCode)) {
+        // 처음 출력되는 노드
+        sb.append(String.format("First - %d; ", nodeHashCode));
+        sb.append(String.format("%s; ", boundsInParent));
+        sb.append(String.format("%s; ", boundsInScreen));
+        sb.append(String.format("%s; ", boundsInWindowString));
+        sb.append(String.format("%s; ", node.getPackageName()));
+        sb.append(String.format("%s; ", node.getClassName()));
+        sb.append(String.format("%s; ", node.getText() != null ? node.getText() : "null"));
+        sb.append(String.format("%s; ", stateDescription));
+        sb.append(String.format("%s; ", node.getContentDescription() != null ? node.getContentDescription() : "null"));
+        sb.append(String.format("%s;", node.getParent() != null ? node.getParent().getClassName() : "null"));
+
+        // 노드를 출력된 것으로 기록
+        printedNodes.add(nodeHashCode);
+      } else {
+        // 이미 출력된 적이 있는 노드
+        sb.append(String.format("%d; ", nodeHashCode));
+        sb.append(String.format("%s; ", boundsInParent));
+        sb.append(String.format("%s; ", boundsInScreen));
+        sb.append(String.format("%s; ", boundsInWindowString));
+        sb.append(String.format("%s; ", stateDescription));
+      }
+      sb.append("\n"); // 노드 구분을 위한 줄바꿈
+    }
+    return sb.toString();
+  }
   private void traverseNodeTree(AccessibilityNodeInfo node, int depth, List<AccessibilityNodeInfo> nodeList) {
     if (node == null) return;
 

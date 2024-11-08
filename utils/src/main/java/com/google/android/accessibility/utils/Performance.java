@@ -234,7 +234,7 @@ public class Performance {
 
 
     //noti: Log here
-    LoggerUtil.i(System.currentTimeMillis(),LoggerUtil.DOMAIN_PERFORMANCE,"EventId : %s",eventId.toString());
+    LoggerUtil.i(System.currentTimeMillis(),LoggerUtil.DOMAIN_PERFORMANCE,"%d : %s",LoggerUtil.EVENT_EVENT_ID,eventId.toString());
 
     if (!trackEvents()) {
       return eventId;
@@ -263,7 +263,7 @@ public class Performance {
     EventId eventId = toEventId(event);
 
     //noti: Log here
-    LoggerUtil.i(System.currentTimeMillis(),LoggerUtil.DOMAIN_PERFORMANCE,"EventId : %s",eventId.toString());
+    LoggerUtil.i(System.currentTimeMillis(),LoggerUtil.DOMAIN_PERFORMANCE,"%d : %s",LoggerUtil.EVENT_EVENT_ID,eventId.toString());
 
     if (!trackEvents()) {
       return eventId;
@@ -346,7 +346,7 @@ public class Performance {
     EventId eventId = new EventId(getUptime(), EVENT_TYPE_GESTURE, gestureId);
 
     //noti: Log here
-    LoggerUtil.i(System.currentTimeMillis(),LoggerUtil.DOMAIN_PERFORMANCE,"EventId : %s",eventId.toString());
+    LoggerUtil.i(System.currentTimeMillis(),LoggerUtil.DOMAIN_PERFORMANCE,"%d : %s",LoggerUtil.EVENT_EVENT_ID,eventId.toString());
 
     if (!trackEvents()) {
       return eventId;
@@ -386,7 +386,7 @@ public class Performance {
             new EventId(getUptime(), EVENT_TYPE_FINGERPRINT_GESTURE, fingerprintGestureId);
 
     //noti: Log here
-    LoggerUtil.i(System.currentTimeMillis(),LoggerUtil.DOMAIN_PERFORMANCE,"EventId : %s",eventId.toString());
+    LoggerUtil.i(System.currentTimeMillis(),LoggerUtil.DOMAIN_PERFORMANCE,"%d : %s",LoggerUtil.EVENT_EVENT_ID,eventId.toString());
 
     if (!trackEvents()) {
       return eventId;
@@ -405,7 +405,7 @@ public class Performance {
     EventId eventId = new EventId(getUptime(), EVENT_TYPE_KEY_COMBO, keyComboId);
 
     //noti: Log here
-    LoggerUtil.i(System.currentTimeMillis(),LoggerUtil.DOMAIN_PERFORMANCE,"EventId : %s",eventId.toString());
+    LoggerUtil.i(System.currentTimeMillis(),LoggerUtil.DOMAIN_PERFORMANCE,"%d : %s",LoggerUtil.EVENT_EVENT_ID,eventId.toString());
 
     if (!trackEvents()) {
       return eventId;
@@ -423,7 +423,7 @@ public class Performance {
     EventId eventId = new EventId(getUptime(), EVENT_TYPE_VOLUME_KEY_COMBO, keyComboId);
 
     //noti: Log here
-    LoggerUtil.i(System.currentTimeMillis(),LoggerUtil.DOMAIN_PERFORMANCE,"EventId : %s",eventId.toString());
+    LoggerUtil.i(System.currentTimeMillis(),LoggerUtil.DOMAIN_PERFORMANCE,"%d : %s",LoggerUtil.EVENT_EVENT_ID,eventId.toString());
 
     if (!trackEvents()) {
       return eventId;
@@ -441,7 +441,7 @@ public class Performance {
     EventId eventId = new EventId(getUptime(), EVENT_TYPE_ROTATE, orientation);
 
     //noti: Log here
-    LoggerUtil.i(System.currentTimeMillis(),LoggerUtil.DOMAIN_PERFORMANCE,"EventId : %s",eventId.toString());
+    LoggerUtil.i(System.currentTimeMillis(),LoggerUtil.DOMAIN_PERFORMANCE,"%d : %s",LoggerUtil.EVENT_EVENT_ID,eventId.toString());
 
     if (!trackEvents()) {
       return eventId;
@@ -1149,11 +1149,9 @@ public class Performance {
           subtypeString = Integer.toString(eventSubtype);
       }
       return "type:"
-              + EVENT_TYPE_NAMES.get(eventType)
+              + eventType
               + " subtype:"
-              + subtypeString
-              + " time:"
-              + eventTimeMs;
+              + subtypeString;
     }
   }
 
