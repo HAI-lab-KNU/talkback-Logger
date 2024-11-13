@@ -1148,9 +1148,8 @@ public class Performance {
         default:
           subtypeString = Integer.toString(eventSubtype);
       }
-      return "type:"
-              + eventType
-              + " subtype:"
+      return eventType
+              + ", "
               + subtypeString;
     }
   }

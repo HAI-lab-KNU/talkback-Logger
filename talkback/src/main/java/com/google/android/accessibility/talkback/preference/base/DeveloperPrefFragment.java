@@ -456,11 +456,11 @@ public class DeveloperPrefFragment extends TalkbackBaseFragment {
         Map<String, ?> allPrefs = prefs.getAll();
         StringBuilder sb = new StringBuilder(String.format("%d : ",LoggerUtil.EVENT_PREFERENCE));
         for (Map.Entry<String, ?> entry : allPrefs.entrySet()) {
-          sb.append("{K: ") //Key
+          sb.append("{ ") //Key
                   .append(entry.getKey())
-                  .append(", V: ") //Value
+                  .append(" : ") //Value
                   .append(entry.getValue().toString())
-                  .append("} ");
+                  .append(" } ");
           }
         LoggerUtil.i(System.currentTimeMillis(), LoggerUtil.DOMAIN_TALKBACK_PREFERENCE, sb.toString());
       }

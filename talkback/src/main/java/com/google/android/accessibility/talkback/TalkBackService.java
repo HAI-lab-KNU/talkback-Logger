@@ -1000,7 +1000,7 @@ public class TalkBackService extends AccessibilityService
   public void onAccessibilityEvent(AccessibilityEvent event) {
 
     //noti:
-    //LoggerUtil.i(System.currentTimeMillis(),DOMAIN,"%s : s%",LoggerUtil.EVENT_ACCESSIBILITY_EVENT,event.toString());
+    LoggerUtil.i(System.currentTimeMillis(),DOMAIN,"CHECK THIS!! : %s",event.toString());
 
     Performance perf = Performance.getInstance();
     EventId eventId = perf.onEventReceived(event);
@@ -1091,28 +1091,28 @@ public class TalkBackService extends AccessibilityService
 
       if (!printedNodes.contains(nodeHashCode)) {
         // 처음 출력되는 노드
-        sb.append(String.format("First - %d; ", nodeHashCode));
-        sb.append(String.format("%s; ", boundsInParent));
-        sb.append(String.format("%s; ", boundsInScreen));
-        sb.append(String.format("%s; ", boundsInWindowString));
-        sb.append(String.format("%s; ", node.getPackageName()));
-        sb.append(String.format("%s; ", node.getClassName()));
-        sb.append(String.format("%s; ", node.getText() != null ? node.getText() : "null"));
-        sb.append(String.format("%s; ", stateDescription));
-        sb.append(String.format("%s; ", node.getContentDescription() != null ? node.getContentDescription() : "null"));
-        sb.append(String.format("%s;", node.getParent() != null ? node.getParent().getClassName() : "null"));
+        sb.append(String.format("First : %d, ", nodeHashCode));
+        sb.append(String.format("%s, ", boundsInParent));
+        sb.append(String.format("%s, ", boundsInScreen));
+        sb.append(String.format("%s, ", boundsInWindowString));
+        sb.append(String.format("%s, ", node.getPackageName()));
+        sb.append(String.format("%s, ", node.getClassName()));
+        sb.append(String.format("%s, ", node.getText() != null ? node.getText() : "null"));
+        sb.append(String.format("%s, ", stateDescription));
+        sb.append(String.format("%s, ", node.getContentDescription() != null ? node.getContentDescription() : "null"));
+        sb.append(String.format("%s,", node.getParent() != null ? node.getParent().getClassName() : "null"));
 
         // 노드를 출력된 것으로 기록
         printedNodes.add(nodeHashCode);
       } else {
         // 이미 출력된 적이 있는 노드
-        sb.append(String.format("%d; ", nodeHashCode));
-        sb.append(String.format("%s; ", boundsInParent));
-        sb.append(String.format("%s; ", boundsInScreen));
-        sb.append(String.format("%s; ", boundsInWindowString));
-        sb.append(String.format("%s; ", stateDescription));
+        sb.append(String.format("%d, ", nodeHashCode));
+        sb.append(String.format("%s, ", boundsInParent));
+        sb.append(String.format("%s, ", boundsInScreen));
+        sb.append(String.format("%s, ", boundsInWindowString));
+        sb.append(String.format("%s, ", stateDescription));
       }
-      sb.append("\n"); // 노드 구분을 위한 줄바꿈
+      sb.append("; "); // 노드 구분을 위한 줄바꿈
     }
     return sb.toString();
   }
