@@ -250,10 +250,6 @@ import com.google.android.libraries.accessibility.utils.log.LogHelper;
 import com.google.android.libraries.accessibility.utils.log.LogUtils;
 import com.google.android.libraries.accessibility.utils.log.LoggerUtil;
 import com.google.common.collect.ImmutableMap;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.FirebaseDatabase;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -736,17 +732,6 @@ public class TalkBackService extends AccessibilityService
 
   private static final int DOMAIN = LoggerUtil.DOMAIN_TALKBACK_SERVICE;
 
-  private static StringBuilder sb;
-
-
-  private Handler handler;
-  private Runnable heartBeatTask;
-  private String experimenterNumber;
-  private DatabaseReference dbRef;
-  private Long indexOfFirebase = 0L;
-  private static final int PERMISSION_REQUEST_CODE = 100;
-  private static SimpleDateFormat dateFormat = new SimpleDateFormat("yy-MM-dd HH:mm:ss",Locale.getDefault());
-  private static FirebaseAuth auth;
   private final ExecutorService executorService = Executors.newSingleThreadExecutor();
   private PermissionResultReceiver permissionResultReceiver;
   private final Set<Integer> printedNodes = new HashSet<>();
@@ -761,7 +746,6 @@ public class TalkBackService extends AccessibilityService
     this.setTheme(R.style.TalkbackBaseTheme);
     instance = this;
     try(LogHelper logHelper = new LogHelper(this)){
-      LogHelper.startBackupTask();
       Log.d("CHECK!","LoggerHelper Success to Assignment");
     }catch (Exception e){
       e.printStackTrace();
@@ -769,28 +753,8 @@ public class TalkBackService extends AccessibilityService
     setServiceState(ServiceStateListener.SERVICE_STATE_INACTIVE);
     systemUeh = Thread.getDefaultUncaughtExceptionHandler();
     Thread.setDefaultUncaughtExceptionHandler(this);
-  }
 
-  // HeartBeat를 Firebase Realtime Database에 전송하는 메서드
-  private void sendHeartBeat() {
-    Long now = System.currentTimeMillis();
-    // 현재 시간과 실험자 번호로 HeartBeat 데이터 생성
-    Map<String, Long> heartBeatData = new HashMap<>(); // 로깅 인덱스
-    heartBeatData.put("timestamp", now);  // 현재 시간
-    heartBeatData.put("index",indexOfFirebase++);
-    // Firebase에 HeartBeat 데이터 전송
-    dbRef.child(experimenterNumber).child(dateFormat.format(new Date(now))).setValue(heartBeatData).addOnSuccessListener(new OnSuccessListener<Void>() {
-              @Override
-              public void onSuccess(Void aVoid) {
-                Log.d("Firebase", "Data added successfully under userId: " + experimenterNumber);
-              }
-            })
-            .addOnFailureListener(new OnFailureListener() {
-              @Override
-              public void onFailure(@NonNull Exception e) {
-                Log.e("Firebase", "Failed to add data", e);
-              }
-            });
+    LogHelper.scheduleDBUpload();
   }
 
 
@@ -891,11 +855,6 @@ public class TalkBackService extends AccessibilityService
   @Override
   public void onDestroy() {
 
-    // 핸들러에서 HeartBeat 작업 제거
-    if (handler != null && heartBeatTask != null) {
-      handler.removeCallbacks(heartBeatTask);
-    }
-
     if (eventLatencyLogger != null) {
       eventLatencyLogger.destroy();
     }
@@ -924,13 +883,6 @@ public class TalkBackService extends AccessibilityService
 
     executorService.shutdown();
     LoggerUtil.shutdownExecutor();
-    try {
-      LogHelper.backupDatabase();  // 백업 작업 실행
-      LogHelper.stopBackupTask();
-    }
-    catch (Exception e){
-      Log.e("Backup Task","Failed to backup");
-    }
 
     if (permissionResultReceiver != null) {
       unregisterReceiver(permissionResultReceiver);
@@ -1654,37 +1606,7 @@ public class TalkBackService extends AccessibilityService
     primesController.stopTimer(TimerAction.START_UP);
 
     //noti
-    // Firebase 초기화
-    //android.os.Debug.waitForDebugger();
     LoggerUtil loggerUtil = new LoggerUtil();
-
-    // FirebaseAuth 인스턴스 초기화
-    auth = FirebaseAuth.getInstance();
-
-    dbRef = FirebaseDatabase.getInstance().getReference();
-    if ( dbRef!= null) {
-      // 10분마다 HeartBeat 전송을 위한 Handler 초기화
-      handler = new Handler(Looper.getMainLooper());
-      // HeartBeat 전송 작업 정의
-      heartBeatTask = new Runnable() {
-        @Override
-        public void run() {
-          if(prefs!=null){
-            experimenterNumber = prefs.getString("pref_experimenter_number","not yet");
-            if(!experimenterNumber.equals("not yet")) {
-              Log.d("Firebase", "Running Runnable() --> run()");
-              sendHeartBeat();
-            }
-            else {Log.d("Firebase", "experimenterNumber == null");}}
-          // 10분(600,000 밀리초)마다 반복 실행
-          handler.postDelayed(this, 600000); // 10분 = 600000 밀리초
-        }
-      };
-      // 처음에 HeartBeat 즉시 전송
-      handler.post(heartBeatTask);
-    } else {
-      Log.e("Firebase", "Firebase initialization failed.");
-    }
   }
 
   /**

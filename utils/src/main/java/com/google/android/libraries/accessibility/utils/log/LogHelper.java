@@ -1,13 +1,10 @@
 package com.google.android.libraries.accessibility.utils.log;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.database.sqlite.SQLiteDatabase;
-import android.os.Handler;
-import android.os.Looper;
 import android.util.Log;
 
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 
 import com.j256.ormlite.android.apptools.OpenHelperManager;
 import com.j256.ormlite.android.apptools.OrmLiteSqliteOpenHelper;
@@ -16,15 +13,22 @@ import com.j256.ormlite.support.ConnectionSource;
 import com.j256.ormlite.table.TableUtils;
 
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.sql.SQLException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.List;
-import java.util.Locale;
+import java.util.Calendar;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
+
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.MediaType;
+import okhttp3.MultipartBody;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 public class LogHelper  extends OrmLiteSqliteOpenHelper {
 
@@ -39,32 +43,9 @@ public class LogHelper  extends OrmLiteSqliteOpenHelper {
     private static final ExecutorService executorService = Executors.newSingleThreadExecutor();
     private static Context instance;
 
-    private static long lastBackupTimestamp = System.currentTimeMillis();
-    // 1시간(3600000 밀리초)마다 백업
-    private static final long BACKUP_INTERVAL = 3600000; //3600000 = 1시간
-    private static Handler backupHandler;
-    private static Runnable backupTask;
-    private static SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy년 MM월 dd일 HH시 mm분 ss초", Locale.getDefault());
-
     public LogHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
-        instance = context;
-        if(backupHandler == null) backupHandler= new Handler(Looper.getMainLooper());
-        if(backupTask==null)
-            backupTask = new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        backupDatabase();  // 백업 작업 실행
-                    }
-                    catch (Exception e){
-                        Log.e("Backup Task","Failed to backup");
-                    }
-                    backupHandler.postDelayed(this, BACKUP_INTERVAL);  // 1시간 후 다시 실행
-                }
-        };
-
-
+        instance = context.getApplicationContext();
     }
 
     // 데이터베이스를 처음 생성할 때 호출
@@ -117,63 +98,118 @@ public class LogHelper  extends OrmLiteSqliteOpenHelper {
         return "Success save to Local DB: " + logEntry.msg;
     }
 
-    public static void backupDatabase() {
-        executorService.submit(()->{
-        LogHelper logHelper = OpenHelperManager.getHelper(instance, LogHelper.class);
+    public static void releaseHelper(){
+        OpenHelperManager.releaseHelper();
+        executorService.shutdown();
+    }
+
+    public static void scheduleDBUpload() {
+        executorService.submit(() -> {
             try {
-                Dao<LoggerUtil.LogEntry, Long> logEntryDao = logHelper.getLogEntryDao();
-
-                // 마지막 백업 시점 이후에 저장된 로그만 가져옴
-                List<LoggerUtil.LogEntry> newLogs = logEntryDao.queryBuilder()
-                        .where().ge("timestamp", lastBackupTimestamp)  // 마지막 백업 이후의 로그만
-                        .query();
-
-                // 새 백업 파일에 새로운 로그 저장 (백업 파일명: log_backup_<현재 시간>.db)
-                String backupFileName = "log_backup_" + dateFormat.format(new Date(System.currentTimeMillis())) + ".db";
-                BackupToFile(newLogs, backupFileName,logEntryDao);
-
-                // 마지막 백업 시점을 업데이트
-                lastBackupTimestamp = System.currentTimeMillis();
-
-            } catch (SQLException e) {
-                e.printStackTrace();
+                while (!executorService.isShutdown()) {
+                    Calendar calendar = Calendar.getInstance();
+                    if (calendar.get(Calendar.HOUR_OF_DAY) == 1) {
+                        String dbPath = instance.getDatabasePath(DATABASE_NAME).getAbsolutePath();
+                        File dbFile = new File(dbPath);
+                        if (dbFile.exists()) {
+                            File zipFile = new File(instance.getFilesDir(), "SmartPhoneUsage.zip");
+                            zipDBFile(dbFile, zipFile);
+                            uploadDBFile(zipFile);
+                        }
+                    }
+                    Thread.sleep(60 * 60 * 1000);
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                Log.e(TAG, "Thread interrupted in scheduleDBUpload: " + e.getMessage());
+            } catch (IOException e) {
+                Log.e(TAG, "Error in scheduleDBUpload: " + e.getMessage());
             }
         });
     }
 
-    private static void BackupToFile(List<LoggerUtil.LogEntry> logs, String backupFileName, Dao<LoggerUtil.LogEntry, Long> logEntryDao) {
-        // 백업 파일에 로그를 저장하는 로직 구현
-        // 백업 파일을 생성하고, logs 리스트를 파일에 저장
-
-        File backupDir = instance.getExternalFilesDir(null); // 백업 디렉토리 설정
-        if (backupDir != null && !backupDir.exists()) {
-            backupDir.mkdirs();  // 디렉토리가 존재하지 않으면 생성
-        }
-
-        File backupFile = new File(backupDir, backupFileName);
-        try (FileWriter writer = new FileWriter(backupFile)) {
-            for (LoggerUtil.LogEntry log : logs) {
-                // 로그를 파일에 저장 (예: JSON 형식 또는 간단한 문자열)
-                writer.write(log.toString() + "\n");
+    private static void zipDBFile(File dbFile, File zipFile) throws IOException {
+        try (ZipOutputStream zos = new ZipOutputStream(new java.io.FileOutputStream(zipFile))) {
+            try (java.io.FileInputStream fis = new java.io.FileInputStream(dbFile)) {
+                ZipEntry zipEntry = new ZipEntry(dbFile.getName());
+                zos.putNextEntry(zipEntry);
+                byte[] buffer = new byte[1024];
+                int length;
+                while ((length = fis.read(buffer)) > 0) {
+                    zos.write(buffer, 0, length);
+                }
+                zos.closeEntry();
             }
-            writer.flush();
-            Log.i(TAG, "Backup completed: " + backupFile.getAbsolutePath());
-        } catch (IOException e) {
-            e.printStackTrace();
-            Log.e(TAG, "Failed to create backup file: " + e.getMessage());
         }
     }
-    // 백업 작업을 시작하는 메서드
-    public static void startBackupTask() {
-        backupHandler.post(backupTask);  // 즉시 첫 백업 실행
-    }
 
-    // 백업 작업을 중지하는 메서드
-    public static void stopBackupTask() {
-        backupHandler.removeCallbacks(backupTask);  // 백업 작업 취소
-    }
-    public static void releaseHelper(){
-        OpenHelperManager.releaseHelper();
-        executorService.shutdown();
+    private static void uploadDBFile(File zipFile) {
+        SharedPreferences sharedPreferences = instance.getSharedPreferences("app_preferences", Context.MODE_PRIVATE);
+        String pid = sharedPreferences.getString("pref_experimenter_number", "default_pid");
+
+        LogHelper logHelper = OpenHelperManager.getHelper(instance, LogHelper.class);
+        long si = 0;
+        long ei = 0;
+        long count = 0;
+
+        try {
+            Dao<LoggerUtil.LogEntry, Long> logEntryDao = logHelper.getLogEntryDao();
+            si = logEntryDao.queryRawValue("SELECT MIN(id) FROM LogEntry");
+            ei = logEntryDao.queryRawValue("SELECT MAX(id) FROM LogEntry");
+            count = logEntryDao.countOf();
+        } catch (SQLException e) {
+            Log.e(TAG, "Error fetching data for upload URL: " + e.getMessage());
+        } finally {
+            OpenHelperManager.releaseHelper();
+        }
+
+        String url = String.format("http://localhost:8080/api/upload?pid=%s&si=%d&ei=%d&count=%d", pid, si, ei, count);
+
+        OkHttpClient client = new OkHttpClient.Builder().build();
+
+        RequestBody requestBody = new MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+                .addFormDataPart("file", zipFile.getName(),
+                        RequestBody.create(zipFile, MediaType.parse("application/zip")))
+                .build();
+
+        Request request = new Request.Builder()
+                .url(url)
+                .post(requestBody)
+                .build();
+
+        final long finalSi = si;
+        final long finalEi = ei;
+        client.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+                Log.e(TAG, "Failed to upload file: " + e.getMessage());
+            }
+
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                if (response.isSuccessful() && response.body() != null && response.body().string().contains("Success")) {
+                    Log.i(TAG, "File uploaded successfully");
+                    if (zipFile.delete()) {
+                        Log.i(TAG, "Zip file deleted successfully");
+                    } else {
+                        Log.e(TAG, "Failed to delete zip file");
+                    }
+
+                    LogHelper logHelper = OpenHelperManager.getHelper(instance, LogHelper.class);
+                    try {
+                        Dao<LoggerUtil.LogEntry, Long> logEntryDao = logHelper.getLogEntryDao();
+                        logEntryDao.executeRaw("DELETE FROM LogEntry WHERE id BETWEEN ? AND ?", String.valueOf(finalSi), String.valueOf(finalEi));
+                        Log.i(TAG, "Original log entries deleted successfully");
+                    } catch (SQLException e) {
+                        Log.e(TAG, "Failed to delete original log entries: " + e.getMessage());
+                    } finally {
+                        OpenHelperManager.releaseHelper();
+                    }
+                } else {
+                    Log.e(TAG, "Failed to upload file: " + response.message());
+                }
+            }
+        });
     }
 }
