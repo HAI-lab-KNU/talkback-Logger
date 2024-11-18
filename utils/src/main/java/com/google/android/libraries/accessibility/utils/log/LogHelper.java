@@ -43,10 +43,19 @@ public class LogHelper  extends OrmLiteSqliteOpenHelper {
     private Dao<LoggerUtil.LogEntry, Long> logEntryDao = null;
     private static final ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
     private static Context instance;
+    private static LogHelper logHelperInstance = null;
 
     public LogHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
         instance = context.getApplicationContext();
+    }
+
+    // LogHelper의 전역 인스턴스를 관리
+    public static synchronized LogHelper getInstance(Context context) {
+        if (logHelperInstance == null) {
+            logHelperInstance = OpenHelperManager.getHelper(context, LogHelper.class);
+        }
+        return logHelperInstance;
     }
 
     // 데이터베이스를 처음 생성할 때 호출
@@ -88,7 +97,7 @@ public class LogHelper  extends OrmLiteSqliteOpenHelper {
 
     public static String SavetoLocalDB(LoggerUtil.LogEntry logEntry) {
         // 데이터베이스에 로그를 저장하는 작업
-        LogHelper logHelper = OpenHelperManager.getHelper(instance, LogHelper.class);
+        LogHelper logHelper = getInstance(instance);
         try {
             Dao<LoggerUtil.LogEntry, Long> logEntryDao = logHelper.getLogEntryDao();
             logEntryDao.create(logEntry);  // 로그 항목을 데이터베이스에 저장
@@ -100,7 +109,10 @@ public class LogHelper  extends OrmLiteSqliteOpenHelper {
     }
 
     public static void releaseHelper(){
-        OpenHelperManager.releaseHelper();
+        if (logHelperInstance != null) {
+            OpenHelperManager.releaseHelper();
+            logHelperInstance = null;
+        }
         executorService.shutdown();
     }
     //noti : Log.d("Log to server", "");
@@ -144,7 +156,7 @@ public class LogHelper  extends OrmLiteSqliteOpenHelper {
     }
 
     private static void uploadDBFile(File zipFile,String pid) {
-        LogHelper logHelper = OpenHelperManager.getHelper(instance, LogHelper.class);
+        LogHelper logHelper = getInstance(instance);
         long si = 0;
         long ei = 0;
         long count = 0;
@@ -159,8 +171,13 @@ public class LogHelper  extends OrmLiteSqliteOpenHelper {
         } finally {
             OpenHelperManager.releaseHelper();
         }
-
-        String url = String.format(ServerURL.serverURL+"/api/upload?pid=%s&si=%d&ei=%d&count=%d", pid, si, ei, count);
+        String url;
+        try{
+         url = String.format(ServerURL.serverURL+"/api/upload?pid=%s&si=%d&ei=%d&count=%d", pid, si, ei, count);}
+        catch (Exception e){
+            Log.d("Log to server", "url setting error : "+ e);
+            return;
+        }
         Log.d("Log to server", "URL : "+ url);
         OkHttpClient client = new OkHttpClient.Builder().build();
 
@@ -193,7 +210,7 @@ public class LogHelper  extends OrmLiteSqliteOpenHelper {
                         Log.e("Log to server", "Failed to delete zip file");
                     }
 
-                    LogHelper logHelper = OpenHelperManager.getHelper(instance, LogHelper.class);
+                    LogHelper logHelper = getInstance(instance);
                     try {
                         Dao<LoggerUtil.LogEntry, Long> logEntryDao = logHelper.getLogEntryDao();
                         logEntryDao.executeRaw("DELETE FROM LogEntry WHERE id BETWEEN ? AND ?", String.valueOf(finalSi), String.valueOf(finalEi));
