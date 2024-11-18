@@ -68,5 +68,3 @@ dependencies {
     implementation 'com.squareup.okhttp3:okhttp:4.9.3'
 
 }
-
-apply plugin: 'com.google.gms.google-services'  // Firebase 서비스 플러그인

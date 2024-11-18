@@ -1,6 +1,5 @@
 apply plugin: 'com.android.library'
 apply from: "../shared.gradle"
-apply plugin: 'com.google.gms.google-services'
 
 dependencies {
     implementation project(':proguard')
@@ -9,13 +8,6 @@ dependencies {
     implementation project(':brailleinterfaces')
     implementation project(':brailledisplay')
 
-    implementation(platform("com.google.firebase:firebase-bom:33.4.0"))
-
-    // Declare the dependency for the Cloud Firestore library
-    // When using the BoM, you don't specify versions in Firebase library dependencies
-    implementation 'com.google.firebase:firebase-database:21.0.0'
-
-    implementation 'com.google.firebase:firebase-auth:21.0.7'
 }
 
 android {

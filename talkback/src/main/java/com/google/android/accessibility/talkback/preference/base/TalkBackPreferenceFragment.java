@@ -18,8 +18,10 @@ package com.google.android.accessibility.talkback.preference.base;
 import static com.google.android.accessibility.talkback.NotificationActivity.HELP_WEB_URL;
 import static com.google.android.accessibility.talkback.preference.PreferencesActivityUtils.HELP_URL;
 
+import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
@@ -27,8 +29,10 @@ import android.content.pm.ResolveInfo;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.speech.tts.TextToSpeech;
+import android.telephony.TelephonyManager;
 import android.util.Log;
 
+import androidx.core.content.ContextCompat;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.preference.ListPreference;
 import androidx.preference.Preference;
@@ -50,6 +54,7 @@ import com.google.android.accessibility.utils.FeatureSupport;
 import com.google.android.accessibility.utils.FormFactorUtils;
 import com.google.android.accessibility.utils.PreferenceSettingsUtils;
 import com.google.android.accessibility.utils.SettingsUtils;
+import com.google.android.accessibility.utils.SharedPreferencesUtils;
 import com.google.android.libraries.accessibility.utils.log.LoggerUtil;
 
 import java.util.List;
@@ -63,6 +68,7 @@ public class TalkBackPreferenceFragment extends TalkbackBaseFragment {
   private Context context;
   private final FormFactorUtils formFactorUtils = FormFactorUtils.getInstance();
 
+  private SharedPreferences prefs;
   private Optional<HatsSurveyRequester> hatsSurveyRequester;
 
   public TalkBackPreferenceFragment() {
@@ -81,12 +87,12 @@ public class TalkBackPreferenceFragment extends TalkbackBaseFragment {
   @Override
   public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
     super.onCreatePreferences(savedInstanceState, rootKey);
-
     context = getContext();
     if (context == null) {
       return;
     }
 
+    prefs = SharedPreferencesUtils.getSharedPreferences(context);
     fixListSummaries(getPreferenceScreen());
 
     HatsRequesterViewModel viewModel =
@@ -168,8 +174,31 @@ public class TalkBackPreferenceFragment extends TalkbackBaseFragment {
       removePreference(
           R.string.pref_category_controls_key, R.string.pref_auto_image_captioning_key);
     }
-  }
+    // 저장된 실험자 번호가 있으면 부제목을 업데이트
+    String phoneNum = getPhoneNumber();
+    String savedNumber = prefs.getString("pref_experimenter_number", phoneNum);
+    if(phoneNum.equals(savedNumber)) {
+      SharedPreferences.Editor editor = prefs.edit();
+      editor.putString("pref_experimenter_number", phoneNum);
+      editor.apply();
+    }
 
+  }
+  private String getPhoneNumber() {
+    Context context = getContext();
+    if (context == null) {
+      return "컨텍스트 없음";
+    }
+
+    TelephonyManager telephonyManager = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
+    // 전화번호 가져오기
+    if (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_PHONE_NUMBERS) != PackageManager.PERMISSION_GRANTED) {
+      requestPermissions(new String[]{Manifest.permission.READ_PHONE_NUMBERS}, 101);
+      return "권한 없음";
+    }
+    String phoneNumber = telephonyManager.getLine1Number();
+    return phoneNumber != null ? phoneNumber : "전화번호 없음";
+  }
   @Override
   public void onResume() {
     super.onResume();

@@ -83,6 +83,8 @@ import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.graphics.Rect;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.VisibleForTesting;
 import androidx.core.content.ContextCompat;
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat;
@@ -243,8 +245,6 @@ import com.google.android.accessibility.utils.output.SpeechController;
 import com.google.android.accessibility.utils.output.SpeechController.UtteranceCompleteRunnable;
 import com.google.android.accessibility.utils.output.SpeechControllerImpl;
 import com.google.android.accessibility.utils.output.SpeechControllerImpl.CapitalLetterHandlingMethod;
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.libraries.accessibility.utils.concurrent.HandlerExecutor;
 import com.google.android.libraries.accessibility.utils.log.LogHelper;
 import com.google.android.libraries.accessibility.utils.log.LogUtils;
@@ -257,10 +257,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
 import java.lang.Thread.UncaughtExceptionHandler;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -475,8 +473,8 @@ public class TalkBackService extends AccessibilityService
   }
 
   private void checkAndRequestPermission() {
-    // 권한 요청 (여기서는 WRITE_EXTERNAL_STORAGE 예시)
-    String[] permissions = new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE};
+    // 권한 요청
+    String[] permissions = new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE,Manifest.permission.READ_PHONE_NUMBERS};
 
     // 권한 요청을 시작
     PermissionUtils.requestPermissions(this, permissions);
@@ -742,7 +740,6 @@ public class TalkBackService extends AccessibilityService
     ContextCompat.registerReceiver(this, bootReceiver, BootReceiver.getFilter(), RECEIVER_EXPORTED);
     super.onCreate();
 
-
     this.setTheme(R.style.TalkbackBaseTheme);
     instance = this;
     try(LogHelper logHelper = new LogHelper(this)){
@@ -756,8 +753,6 @@ public class TalkBackService extends AccessibilityService
 
     LogHelper.scheduleDBUpload();
   }
-
-
   /**
    * Calculates the volume for {@link SpeechControllerImpl#setSpeechVolume(float)} when announcing
    * "TalkBack off".
@@ -952,7 +947,7 @@ public class TalkBackService extends AccessibilityService
   public void onAccessibilityEvent(AccessibilityEvent event) {
 
     //noti:
-    LoggerUtil.i(System.currentTimeMillis(),DOMAIN,"CHECK THIS!! : %s",event.toString());
+    //LoggerUtil.i(System.currentTimeMillis(),DOMAIN,"CHECK THIS!! : %s",event.toString());
 
     Performance perf = Performance.getInstance();
     EventId eventId = perf.onEventReceived(event);
@@ -1047,10 +1042,10 @@ public class TalkBackService extends AccessibilityService
         sb.append(String.format("%s, ", boundsInParent));
         sb.append(String.format("%s, ", boundsInScreen));
         sb.append(String.format("%s, ", boundsInWindowString));
+        sb.append(String.format("%s, ", stateDescription));
         sb.append(String.format("%s, ", node.getPackageName()));
         sb.append(String.format("%s, ", node.getClassName()));
         sb.append(String.format("%s, ", node.getText() != null ? node.getText() : "null"));
-        sb.append(String.format("%s, ", stateDescription));
         sb.append(String.format("%s, ", node.getContentDescription() != null ? node.getContentDescription() : "null"));
         sb.append(String.format("%s,", node.getParent() != null ? node.getParent().getClassName() : "null"));
 

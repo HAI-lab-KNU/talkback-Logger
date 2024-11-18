@@ -6,6 +6,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.util.Log;
 
 
+import com.google.android.accessibility.utils.SharedPreferencesUtils;
 import com.j256.ormlite.android.apptools.OpenHelperManager;
 import com.j256.ormlite.android.apptools.OrmLiteSqliteOpenHelper;
 import com.j256.ormlite.dao.Dao;
@@ -15,9 +16,9 @@ import com.j256.ormlite.table.TableUtils;
 import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.Calendar;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -40,7 +41,7 @@ public class LogHelper  extends OrmLiteSqliteOpenHelper {
 
     // DAO 객체 선언 (LogEntry에 대한 데이터베이스 접근을 제공)
     private Dao<LoggerUtil.LogEntry, Long> logEntryDao = null;
-    private static final ExecutorService executorService = Executors.newSingleThreadExecutor();
+    private static final ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
     private static Context instance;
 
     public LogHelper(Context context) {
@@ -102,30 +103,28 @@ public class LogHelper  extends OrmLiteSqliteOpenHelper {
         OpenHelperManager.releaseHelper();
         executorService.shutdown();
     }
-
+    //noti : Log.d("Log to server", "");
     public static void scheduleDBUpload() {
-        executorService.submit(() -> {
+        executorService.scheduleWithFixedDelay(() -> {
             try {
-                while (!executorService.isShutdown()) {
-                    Calendar calendar = Calendar.getInstance();
-                    if (calendar.get(Calendar.HOUR_OF_DAY) == 1) {
-                        String dbPath = instance.getDatabasePath(DATABASE_NAME).getAbsolutePath();
-                        File dbFile = new File(dbPath);
-                        if (dbFile.exists()) {
-                            File zipFile = new File(instance.getFilesDir(), "SmartPhoneUsage.zip");
-                            zipDBFile(dbFile, zipFile);
-                            uploadDBFile(zipFile);
-                        }
+                Log.d("Log to server", "executorService run");
+                String dbPath = instance.getDatabasePath(DATABASE_NAME).getAbsolutePath();
+                File dbFile = new File(dbPath);
+                if (dbFile.exists()) {
+                    Log.d("Log to server", "dbFile exists");
+                    File zipFile = new File(instance.getFilesDir(), "SmartPhoneUsage.zip");
+                    SharedPreferences prefs = SharedPreferencesUtils.getSharedPreferences(instance);
+                    String pid = prefs.getString("pref_experimenter_number", "default_pid");
+                    Log.d("Log to server", "pid : "+ pid);
+                    if(!pid.equals("default_pid")&&!pid.equals("컨텍스트 없음")&&!pid.equals("권한 없음")&&!pid.equals("전화번호 없음")) {
+                        zipDBFile(dbFile, zipFile);
+                        uploadDBFile(zipFile, pid);
                     }
-                    Thread.sleep(60 * 60 * 1000);
                 }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                Log.e(TAG, "Thread interrupted in scheduleDBUpload: " + e.getMessage());
             } catch (IOException e) {
-                Log.e(TAG, "Error in scheduleDBUpload: " + e.getMessage());
+                Log.e("Log to server", "Error in scheduleDBUpload: " + e.getMessage());
             }
-        });
+        }, 0, 1, TimeUnit.HOURS); // Initial delay: 0, Delay between task completions: 1 hour
     }
 
     private static void zipDBFile(File dbFile, File zipFile) throws IOException {
@@ -139,14 +138,12 @@ public class LogHelper  extends OrmLiteSqliteOpenHelper {
                     zos.write(buffer, 0, length);
                 }
                 zos.closeEntry();
+                Log.d("Log to server", "success to compress");
             }
         }
     }
 
-    private static void uploadDBFile(File zipFile) {
-        SharedPreferences sharedPreferences = instance.getSharedPreferences("app_preferences", Context.MODE_PRIVATE);
-        String pid = sharedPreferences.getString("pref_experimenter_number", "default_pid");
-
+    private static void uploadDBFile(File zipFile,String pid) {
         LogHelper logHelper = OpenHelperManager.getHelper(instance, LogHelper.class);
         long si = 0;
         long ei = 0;
@@ -158,13 +155,13 @@ public class LogHelper  extends OrmLiteSqliteOpenHelper {
             ei = logEntryDao.queryRawValue("SELECT MAX(id) FROM LogEntry");
             count = logEntryDao.countOf();
         } catch (SQLException e) {
-            Log.e(TAG, "Error fetching data for upload URL: " + e.getMessage());
+            Log.e("Log to server", "Error fetching data for upload URL: " + e.getMessage());
         } finally {
             OpenHelperManager.releaseHelper();
         }
 
-        String url = String.format("http://localhost:8080/api/upload?pid=%s&si=%d&ei=%d&count=%d", pid, si, ei, count);
-
+        String url = String.format(ServerURL.serverURL+"/api/upload?pid=%s&si=%d&ei=%d&count=%d", pid, si, ei, count);
+        Log.d("Log to server", "URL : "+ url);
         OkHttpClient client = new OkHttpClient.Builder().build();
 
         RequestBody requestBody = new MultipartBody.Builder()
@@ -183,31 +180,36 @@ public class LogHelper  extends OrmLiteSqliteOpenHelper {
         client.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
-                Log.e(TAG, "Failed to upload file: " + e.getMessage());
+                Log.e("Log to server", "Failed to upload file: " + e.getMessage());
             }
 
             @Override
             public void onResponse(Call call, Response response) throws IOException {
                 if (response.isSuccessful() && response.body() != null && response.body().string().contains("Success")) {
-                    Log.i(TAG, "File uploaded successfully");
+                    Log.d("Log to server", "File uploaded successfully");
                     if (zipFile.delete()) {
-                        Log.i(TAG, "Zip file deleted successfully");
+                        Log.d("Log to server", "Zip file deleted successfully");
                     } else {
-                        Log.e(TAG, "Failed to delete zip file");
+                        Log.e("Log to server", "Failed to delete zip file");
                     }
 
                     LogHelper logHelper = OpenHelperManager.getHelper(instance, LogHelper.class);
                     try {
                         Dao<LoggerUtil.LogEntry, Long> logEntryDao = logHelper.getLogEntryDao();
                         logEntryDao.executeRaw("DELETE FROM LogEntry WHERE id BETWEEN ? AND ?", String.valueOf(finalSi), String.valueOf(finalEi));
-                        Log.i(TAG, "Original log entries deleted successfully");
+                        Log.d("Log to server", "Original log entries deleted successfully");
                     } catch (SQLException e) {
-                        Log.e(TAG, "Failed to delete original log entries: " + e.getMessage());
+                        Log.e("Log to server", "Failed to delete original log entries: " + e.getMessage());
                     } finally {
                         OpenHelperManager.releaseHelper();
                     }
                 } else {
-                    Log.e(TAG, "Failed to upload file: " + response.message());
+                    if (zipFile.delete()) {
+                        Log.d("Log to server", "Zip file deleted successfully");
+                    } else {
+                        Log.e("Log to server", "Failed to delete zip file");
+                    }
+                    Log.e("Log to server", "Failed to upload file: " + response.message());
                 }
             }
         });

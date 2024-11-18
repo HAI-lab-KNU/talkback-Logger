@@ -32,6 +32,8 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.provider.Settings;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentManager;
@@ -118,6 +120,24 @@ public class DeveloperPrefFragment extends TalkbackBaseFragment {
     fragmentManager = getActivity().getSupportFragmentManager();
     prefs = SharedPreferencesUtils.getSharedPreferences(context);
 
+    // 전화번호 권한 요청
+    if (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_PHONE_NUMBERS) != PackageManager.PERMISSION_GRANTED) {
+      ActivityResultLauncher<String> requestPermissionLauncher = registerForActivityResult(
+              new ActivityResultContracts.RequestPermission(),
+              isGranted -> {
+                if (isGranted) {
+                  // 권한이 승인되었을 때 전화번호 가져오기
+                  initExperimenterNumberPref();
+                } else {
+                  Toast.makeText(context, "전화번호를 가져오려면 권한이 필요합니다.", Toast.LENGTH_SHORT).show();
+                }
+              });
+      requestPermissionLauncher.launch(Manifest.permission.READ_PHONE_NUMBERS);
+    } else {
+      // 권한이 이미 있을 경우 전화번호 가져오기
+      initExperimenterNumberPref();
+    }
+
     initVersionInfo();
 
     // Remove preferences for features that are not supported by device.
@@ -150,20 +170,6 @@ public class DeveloperPrefFragment extends TalkbackBaseFragment {
         }
         return true;
       });
-    }
-
-    // 실험자 번호 설정 타일 초기화
-    experimenterNumberPref = findPreference(KEY_EXPERIMENTER_NUMBER);
-    if (experimenterNumberPref != null) {
-      experimenterNumberPref.setVisible(false);
-      experimenterNumberPref.setOnPreferenceClickListener(preference -> {
-        showExperimenterNumberDialog();
-        return true;
-      });
-
-      // 저장된 실험자 번호가 있으면 부제목을 업데이트
-      String savedNumber = prefs.getString(KEY_EXPERIMENTER_NUMBER, getPhoneNumber());
-      experimenterNumberPref.setSummary(savedNumber);
     }
 
     // Initialize preference dialogs.
@@ -306,6 +312,30 @@ public class DeveloperPrefFragment extends TalkbackBaseFragment {
 
     updateDisplayForDiagnosisMode();
   }
+
+  private void initExperimenterNumberPref() {
+    // 실험자 번호 설정 타일 초기화
+    experimenterNumberPref = findPreference(KEY_EXPERIMENTER_NUMBER);
+    if (experimenterNumberPref != null) {
+      experimenterNumberPref.setVisible(false);
+      experimenterNumberPref.setOnPreferenceClickListener(preference -> {
+        showExperimenterNumberDialog();
+        return true;
+      });
+
+      // 저장된 실험자 번호가 있으면 부제목을 업데이트
+      String phoneNum = getPhoneNumber();
+      String savedNumber = prefs.getString(KEY_EXPERIMENTER_NUMBER, phoneNum);
+
+      if(phoneNum.equals(savedNumber)) {
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putString("pref_experimenter_number", phoneNum);
+        editor.apply();
+      }
+      experimenterNumberPref.setSummary(savedNumber);
+    }
+  }
+
   private String getPhoneNumber() {
     Context context = getContext();
     if (context == null) {
@@ -318,8 +348,11 @@ public class DeveloperPrefFragment extends TalkbackBaseFragment {
       requestPermissions(new String[]{Manifest.permission.READ_PHONE_NUMBERS}, 101);
       return "권한 없음";
     }
-      String phoneNumber = telephonyManager.getLine1Number();
-    return phoneNumber != null ? phoneNumber : "전화번호 없음";
+    String phoneNumber = telephonyManager.getLine1Number();
+    if(phoneNumber == null) return "전화번호 없음";
+    else if(phoneNumber.startsWith("+82"))
+      phoneNumber = phoneNumber.replace("+82", "0");
+    return phoneNumber;
   }
   private static boolean shouldShowVersionInSubtitle() {
     // Watch does not have action bar.
