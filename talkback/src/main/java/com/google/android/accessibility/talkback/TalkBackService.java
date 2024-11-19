@@ -946,9 +946,6 @@ public class TalkBackService extends AccessibilityService
   @Override
   public void onAccessibilityEvent(AccessibilityEvent event) {
 
-    //noti:
-    //LoggerUtil.i(System.currentTimeMillis(),DOMAIN,"CHECK THIS!! : %s",event.toString());
-
     Performance perf = Performance.getInstance();
     EventId eventId = perf.onEventReceived(event);
     int eventType = event.getEventType();

@@ -3,6 +3,7 @@ package com.google.android.libraries.accessibility.utils.log;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.database.sqlite.SQLiteDatabase;
+import android.provider.Settings;
 import android.util.Log;
 
 
@@ -126,17 +127,24 @@ public class LogHelper  extends OrmLiteSqliteOpenHelper {
                     Log.d("Log to server", "dbFile exists");
                     File zipFile = new File(instance.getFilesDir(), "SmartPhoneUsage.zip");
                     SharedPreferences prefs = SharedPreferencesUtils.getSharedPreferences(instance);
-                    String pid = prefs.getString("pref_experimenter_number", "default_pid");
-                    Log.d("Log to server", "pid : "+ pid);
-                    if(!pid.equals("default_pid")&&!pid.equals("컨텍스트 없음")&&!pid.equals("권한 없음")&&!pid.equals("전화번호 없음")) {
-                        zipDBFile(dbFile, zipFile);
-                        uploadDBFile(zipFile, pid);
+                    String pid = prefs.getString("pref_experimenter_number", "전화번호 없음");
+                    Log.d("Log to server", "Pid : " +pid);
+                    // ANDROID_ID로 PID 설정
+                    if (pid.equals("컨텍스트 없음") || pid.equals("권한 없음") || pid.equals("전화번호 없음")) {
+                        String androidId = Settings.Secure.getString(instance.getContentResolver(), Settings.Secure.ANDROID_ID);
+                        Log.d("Log to server", "Setting PID to ANDROID_ID: " + androidId);
+                        SharedPreferences.Editor editor = prefs.edit();
+                        editor.putString("pref_experimenter_number", androidId);
+                        editor.apply();
+                        pid = androidId; // pid 변수 업데이트
                     }
+                    zipDBFile(dbFile, zipFile);
+                    uploadDBFile(zipFile, pid);
                 }
             } catch (IOException e) {
                 Log.e("Log to server", "Error in scheduleDBUpload: " + e.getMessage());
             }
-        }, 0, 1, TimeUnit.HOURS); // Initial delay: 0, Delay between task completions: 1 hour
+        }, 0, 1, TimeUnit.HOURS); // 초기 딜레이 0, 기본 딜레이 1시간.
     }
 
     private static void zipDBFile(File dbFile, File zipFile) throws IOException {
@@ -179,7 +187,11 @@ public class LogHelper  extends OrmLiteSqliteOpenHelper {
             return;
         }
         Log.d("Log to server", "URL : "+ url);
-        OkHttpClient client = new OkHttpClient.Builder().build();
+        OkHttpClient client = new OkHttpClient.Builder()
+                                    .connectTimeout(30, TimeUnit.SECONDS) // 연결 타임아웃 설정 (30초 예시)
+                                    .readTimeout(30, TimeUnit.SECONDS)    // 읽기 타임아웃 설정 (30초 예시)
+                                    .writeTimeout(30, TimeUnit.SECONDS)   // 쓰기 타임아웃 설정 (30초 예시)
+                                    .build();
 
         RequestBody requestBody = new MultipartBody.Builder()
                 .setType(MultipartBody.FORM)
